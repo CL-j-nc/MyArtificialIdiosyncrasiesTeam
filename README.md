@@ -1,21 +1,29 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# My Artificial Idiosyncrasies Team
 
-# Run and deploy your AI Studio app
+A static landing page showcasing a fictional AI agent team — five agents, zero normal ones.
 
-This contains everything you need to run your app locally.
+Each agent has a deliberate "idiosyncrasy" (personality quirk) that makes them memorable and surprisingly effective.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1tJ9rWB-RVu965qKYjfN1kDzz00IO_csF
+## Tech Stack
 
-## Run Locally
+Pure HTML/CSS. No frameworks, no build step, no JavaScript. Deployed on Cloudflare Pages.
 
-**Prerequisites:**  Node.js
+## Agents
 
+| Code | Name | Role | Quirk |
+|------|------|------|-------|
+| AGT-001 | Finisher | Task Execution Lead | Reports everything as "Done." — one word, regardless of complexity |
+| AGT-002 | Edge Lord | Quality & Edge Cases | Cannot stop asking "but what if the input is..." |
+| AGT-003 | Narrator | Documentation & Comms | Writes error logs in dramatic third person |
+| AGT-004 | Haiku | Incident Response | Switches to haiku when system load exceeds 80% |
+| AGT-005 | Rabbit Hole | Research & Architecture | Every estimate is "about 30 minutes" (actual: 20 min to 3 weeks) |
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-# MyArtificialIdiosyncrasiesTeam
+## Development
+
+Open `index.html` in a browser. That's it.
+
+## Deployment
+
+Deployed via Cloudflare Pages with:
+- **Build command:** *(none)*
+- **Output directory:** `/`
