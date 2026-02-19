@@ -381,6 +381,7 @@ const App: React.FC = () => {
   const isLightTheme = currentTheme === AppTheme.CLASSIC || currentTheme === AppTheme.RENAISSANCE;
   const textColorClass = isLightTheme ? 'text-slate-800' : 'text-slate-200';
   const panelBgClass = isLightTheme ? 'bg-white/70 border-black/10' : 'bg-black/80 border-white/10';
+  const isSceneIdle = !state.isRunning && !isLiveActive && !input.trim() && !isDialoguePanelExpanded;
 
   return (
     <div className={`relative w-full h-screen overflow-hidden font-sans select-none flex ${textColorClass} transition-colors duration-1000`}>
@@ -393,6 +394,7 @@ const App: React.FC = () => {
             agentSpeech={agentSpeech}
             agentStyles={agentStyles}
             theme={currentTheme}
+            idleMode={isSceneIdle}
           />
       </div>
 

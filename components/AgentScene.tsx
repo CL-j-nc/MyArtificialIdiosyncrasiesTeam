@@ -75,6 +75,9 @@ interface AgentProps {
   speechText?: string | null;
   delayIndex?: number;
   theme: AppTheme;
+  idleMode?: boolean;
+  idleRole?: 'corner' | 'pair' | 'cards' | 'pond' | 'lying' | 'sneak';
+  lookTarget?: [number, number, number];
 }
 
 const CustomTextureFace: React.FC<{ url: string }> = ({ url }) => {
@@ -87,7 +90,22 @@ const CustomTextureFace: React.FC<{ url: string }> = ({ url }) => {
     );
 }
 
-const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalking, isGlitched, onClick, scale = 1, speechText, delayIndex = 0, theme }) => {
+const AgentAvatar: React.FC<AgentProps> = ({
+  name,
+  role,
+  style,
+  position,
+  isTalking,
+  isGlitched,
+  onClick,
+  scale = 1,
+  speechText,
+  delayIndex = 0,
+  theme,
+  idleMode = false,
+  idleRole,
+  lookTarget,
+}) => {
   const group = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Mesh>(null);
   const bodyRef = useRef<THREE.Mesh>(null);
@@ -103,6 +121,10 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
   
   const targetPos = useMemo(() => new THREE.Vector3(...position), [position]);
   const initialPos = useMemo(() => new THREE.Vector3(position[0], position[1] - 8, position[2]), [position]); 
+  const lookTargetVec = useMemo(
+    () => (lookTarget ? new THREE.Vector3(...lookTarget) : null),
+    [lookTarget]
+  );
 
   useEffect(() => {
     if (group.current) {
@@ -125,6 +147,7 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
+    const idlePose = idleMode && !isTalking;
     
     if (group.current && spawned) {
         // --- Cubic Bezier Progress ---
@@ -138,8 +161,16 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
         const k = 100; 
         const d = 8;
         
-        const hoverY = Math.sin(t * 1.5 + position[0]) * 0.05;
-        const currentTargetY = targetPos.y + hoverY;
+        const hoverY = Math.sin(t * (idlePose ? 1.1 : 1.5) + position[0]) * (idlePose ? 0.02 : 0.05);
+        const hiddenOffset =
+          idlePose && idleRole === 'pond'
+            ? -0.56
+            : idlePose && idleRole === 'corner'
+              ? -0.22
+              : idlePose && idleRole === 'lying'
+                ? -0.2
+                : 0;
+        const currentTargetY = targetPos.y + hoverY + hiddenOffset;
 
         const dispY = currentTargetY - group.current.position.y;
         const accelY = (dispY * k) - (velocity.current.y * d);
@@ -152,12 +183,30 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
         
         // --- Scale Animation using Bezier ---
         const baseScale = easeVal * scale;
-        const targetScaleVal = isSpawning ? baseScale * 1.3 : baseScale;
+        const targetScaleVal = isSpawning
+          ? baseScale * 1.3
+          : idlePose && (idleRole === 'corner' || idleRole === 'pond')
+            ? baseScale * 0.9
+            : idlePose && idleRole === 'lying'
+              ? baseScale * 0.94
+              : baseScale;
         
         group.current.scale.lerp(new THREE.Vector3(targetScaleVal, targetScaleVal, targetScaleVal), 0.15);
         
         // Rotation alignment
-        group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, state.mouse.x * 0.25, 0.1);
+        if (idlePose && lookTargetVec && idleRole !== 'lying') {
+          const dx = lookTargetVec.x - group.current.position.x;
+          const dz = lookTargetVec.z - group.current.position.z;
+          const lookYaw = Math.atan2(dx, dz);
+          group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, lookYaw, 0.14);
+        } else if (idlePose && idleRole === 'lying') {
+          group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, 0.25, 0.1);
+        } else {
+          group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, state.mouse.x * 0.25, 0.1);
+        }
+
+        const targetRoll = idlePose && idleRole === 'lying' ? -1.38 : 0;
+        group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, targetRoll, 0.1);
     }
     
     if (headRef.current && spawned) {
@@ -174,6 +223,21 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
         if (isTalking) {
             headRef.current.rotation.x = Math.sin(t * 12) * 0.15;
             headRef.current.rotation.y = Math.sin(t * 8) * 0.1;
+        } else if (idlePose && (idleRole === 'pair' || idleRole === 'cards')) {
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -0.03, 0.08);
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0, 0.08);
+        } else if (idlePose && idleRole === 'pond') {
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.22, 0.08);
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, Math.sin(t * 0.8) * 0.2, 0.06);
+        } else if (idlePose && idleRole === 'lying') {
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.35, 0.1);
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, -0.28, 0.1);
+        } else if (idlePose && idleRole === 'sneak') {
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -0.08, 0.08);
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0.25, 0.08);
+        } else if (idlePose && idleRole === 'corner') {
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.08, 0.08);
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0.2, 0.08);
         } else {
             headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0, 0.1);
             headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0, 0.1);
@@ -181,9 +245,33 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
     }
 
     if (leftArmRef.current && rightArmRef.current && spawned) {
-        const armWave = isTalking ? Math.sin(t * 8) * 0.3 : Math.sin(t * 2) * 0.05;
-        leftArmRef.current.rotation.z = armWave - 0.2;
-        rightArmRef.current.rotation.z = -armWave + 0.2;
+        if (idlePose && idleRole === 'cards') {
+            leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.65, 0.12);
+            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -0.3, 0.12);
+            rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.65, 0.12);
+            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, -0.3, 0.12);
+        } else if (idlePose && idleRole === 'lying') {
+            leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.12, 0.12);
+            rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.12, 0.12);
+            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, 0.25, 0.12);
+            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, 0.25, 0.12);
+        } else if (idlePose && idleRole === 'sneak') {
+            leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.15, 0.1);
+            rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.7, 0.1);
+            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -0.05, 0.1);
+            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, -0.25, 0.1);
+        } else if (idlePose && idleRole === 'corner') {
+            leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.1, 0.1);
+            rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.1, 0.1);
+            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, 0.1, 0.1);
+            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, 0.1, 0.1);
+        } else {
+            const armWave = isTalking ? Math.sin(t * 8) * 0.3 : Math.sin(t * 2) * 0.05;
+            leftArmRef.current.rotation.z = armWave - 0.2;
+            rightArmRef.current.rotation.z = -armWave + 0.2;
+            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, 0, 0.1);
+            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, 0, 0.1);
+        }
     }
 
     if (bodyRef.current && spawned) {
@@ -307,7 +395,7 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
           </mesh>
           
           {/* Body */}
-          {style.hasBody && (
+          {style.hasBody && !(idleMode && idleRole === 'pond') && (
             <mesh ref={bodyRef} position={[0, 0.1, 0]}>
                 <capsuleGeometry args={[0.18, 0.5, 4, 12]} />
                 <meshStandardMaterial 
@@ -320,7 +408,7 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
             </mesh>
           )}
 
-          {style.hasBody && isHumanFace && (
+          {style.hasBody && isHumanFace && !(idleMode && idleRole === 'pond') && (
             <>
               <mesh position={[-0.09, -0.34, 0]}>
                   <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
@@ -334,7 +422,7 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
           )}
 
           {/* Arms */}
-          {style.hasArms && (
+          {style.hasArms && !(idleMode && idleRole === 'pond') && (
             <>
                 <mesh ref={leftArmRef} position={[-0.25, 0.3, 0]}>
                     <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
@@ -345,6 +433,19 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
                     <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
                 </mesh>
             </>
+          )}
+
+          {idleMode && idleRole === 'cards' && (
+            <group position={[0, 0.18, 0.24]} rotation={[-0.9, 0, 0]}>
+              <mesh>
+                <boxGeometry args={[0.12, 0.17, 0.008]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.9} metalness={0.05} />
+              </mesh>
+              <mesh position={[0, 0.01, 0.005]}>
+                <planeGeometry args={[0.08, 0.12]} />
+                <meshBasicMaterial color="#0ea5e9" transparent opacity={0.75} />
+              </mesh>
+            </group>
           )}
 
           {/* Data Halo (Only show in Cyberpunk/Tech themes) */}
@@ -368,8 +469,12 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
             <div className={`flex flex-col items-center pointer-events-none select-none transition-all duration-1000 ${spawned && !isSpawning ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <div className={`px-3 py-1 ${theme === AppTheme.CLASSIC ? 'bg-white border-black text-black' : 'bg-black/90 border-white/20 text-white'} border rounded-full text-[10px] font-bold tracking-tighter whitespace-nowrap shadow-2xl mb-1 flex items-center gap-2 ${isSpawning ? 'animate-pulse' : ''}`} style={theme === AppTheme.CLASSIC ? {} : { color: style.color }}>
                     <span>{name}</span>
-                    <span className="opacity-50">|</span>
-                    <span className="text-[8px] font-mono opacity-80 max-w-[170px] truncate">{role}</span>
+                    {!idleMode && (
+                      <>
+                        <span className="opacity-50">|</span>
+                        <span className="text-[8px] font-mono opacity-80 max-w-[170px] truncate">{role}</span>
+                      </>
+                    )}
                 </div>
                 {speechText && (
                     <div className={`${theme === AppTheme.CLASSIC ? 'bg-black text-white' : 'bg-white/95 backdrop-blur-md text-black'} px-4 py-2 rounded-2xl rounded-bl-none shadow-2xl animate-bounce-slow border border-white/20`}>
@@ -393,6 +498,7 @@ interface SceneProps {
     agentSpeech?: string | null;
     agentStyles?: AgentStyle[];
     theme: AppTheme;
+    idleMode?: boolean;
 }
 
 interface SceneErrorBoundaryState {
@@ -428,82 +534,146 @@ const SceneFallback: React.FC = () => (
   </div>
 );
 
-const EnvironmentManager: React.FC<{ theme: AppTheme }> = ({ theme }) => {
+type SkyPhase = 'sunrise' | 'day' | 'sunset' | 'night';
+interface SkyState {
+  phase: SkyPhase;
+  cycle: number;
+}
+
+const SKY_COLOR: Record<SkyPhase, string> = {
+  sunrise: '#f9c58f',
+  day: '#b8dcff',
+  sunset: '#f2a17b',
+  night: '#081226',
+};
+
+const getSkyState = (now: Date): SkyState => {
+  const hour = now.getHours() + now.getMinutes() / 60;
+  if (hour >= 5 && hour < 7) {
+    return { phase: 'sunrise', cycle: (hour - 5) / 2 };
+  }
+  if (hour >= 7 && hour < 17) {
+    return { phase: 'day', cycle: (hour - 7) / 10 };
+  }
+  if (hour >= 17 && hour < 19) {
+    return { phase: 'sunset', cycle: (hour - 17) / 2 };
+  }
+  const nightCycle = hour >= 19 ? (hour - 19) / 10 : (hour + 5) / 10;
+  return { phase: 'night', cycle: Math.max(0, Math.min(1, nightCycle)) };
+};
+
+const TimeSky: React.FC<{ sky: SkyState }> = ({ sky }) => {
+  const isNight = sky.phase === 'night';
+  const sunPos =
+    sky.phase === 'sunrise'
+      ? [-9 + sky.cycle * 8, 1 + sky.cycle * 4, -10]
+      : sky.phase === 'day'
+        ? [-1 + Math.sin(sky.cycle * Math.PI) * 2, 7.5, -11]
+        : [0 + sky.cycle * 8, 4.8 - sky.cycle * 3.8, -10];
+  const moonPos: [number, number, number] = [7 - sky.cycle * 12, 5 + Math.sin(sky.cycle * Math.PI) * 1.5, -10];
+
+  return (
+    <>
+      <color attach="background" args={[SKY_COLOR[sky.phase]]} />
+      <fog attach="fog" args={[SKY_COLOR[sky.phase], 7, 30]} />
+      <ambientLight intensity={isNight ? 0.28 : 0.62} color={isNight ? '#9fb0d1' : '#fff4d6'} />
+      <directionalLight
+        position={isNight ? [2, 3, 2] : [6, 10, 5]}
+        intensity={isNight ? 0.32 : 1.25}
+        color={isNight ? '#9ab6ff' : '#ffd58f'}
+      />
+      {!isNight && (
+        <mesh position={sunPos as [number, number, number]}>
+          <sphereGeometry args={[0.52, 24, 24]} />
+          <meshBasicMaterial color={sky.phase === 'sunset' ? '#ffb16b' : '#ffd57e'} />
+        </mesh>
+      )}
+      {isNight && (
+        <>
+          <mesh position={moonPos}>
+            <sphereGeometry args={[0.42, 24, 24]} />
+            <meshBasicMaterial color="#dbeafe" />
+          </mesh>
+          <Stars radius={120} depth={70} count={2500} factor={4} saturation={0} fade speed={0.25} />
+        </>
+      )}
+    </>
+  );
+};
+
+const EnvironmentManager: React.FC<{ theme: AppTheme; sky: SkyState }> = ({ theme, sky }) => {
+  const themedLayer = (() => {
     switch (theme) {
-        case AppTheme.CLASSIC:
-            return (
-                <>
-                    <color attach="background" args={['#e0e0e0']} />
-                    <ambientLight intensity={1.5} />
-                    <directionalLight position={[10, 10, 5]} intensity={2} castShadow />
-                    <ContactShadows resolution={1024} scale={50} blur={2} opacity={0.4} far={10} color="#000" />
-                    <Grid infiniteGrid cellSize={0.5} sectionSize={2} sectionColor="#999" cellColor="#ccc" fadeDistance={30} position={[0, -0.5, 0]} />
-                </>
-            );
-        case AppTheme.RENAISSANCE:
-             return (
-                 <>
-                    <color attach="background" args={['#1a1008']} />
-                    <ambientLight intensity={0.5} color="#d4a373" />
-                    <spotLight position={[5, 10, 5]} angle={0.5} penumbra={1} intensity={4} color="#ffd700" castShadow />
-                    <pointLight position={[-5, 2, -5]} intensity={1} color="#ff6b6b" />
-                    <Environment preset="sunset" blur={0.8} background={false} />
-                    <Stars radius={100} depth={50} count={2000} factor={4} saturation={0} fade speed={0.5} />
-                    <ContactShadows resolution={1024} scale={50} blur={2.5} opacity={0.6} far={10} color="#000" />
-                 </>
-             );
-        case AppTheme.REALISTIC:
-            return (
-                <>
-                    <Environment preset="city" background blur={0.6} />
-                    <ambientLight intensity={0.5} />
-                    <directionalLight position={[-5, 5, 5]} intensity={2} castShadow />
-                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-                        <planeGeometry args={[50, 50]} />
-                        <MeshReflectorMaterial
-                            blur={[300, 100]}
-                            resolution={2048}
-                            mixBlur={1}
-                            mixStrength={60}
-                            roughness={0.5}
-                            depthScale={1.2}
-                            minDepthThreshold={0.4}
-                            maxDepthThreshold={1.4}
-                            color="#202020"
-                            metalness={0.5}
-                            mirror={1}
-                        />
-                    </mesh>
-                </>
-            );
-        case AppTheme.OIL_PAINTING:
-            return (
-                <>
-                     <color attach="background" args={['#2c1810']} />
-                     <Environment preset="park" blur={1} />
-                     <ambientLight intensity={1.2} color="#fff8e1" />
-                     <spotLight position={[0, 10, 0]} intensity={3} color="#fff8e1" castShadow />
-                     <mesh position={[0, 0, -10]} scale={[20, 10, 1]}>
-                        <planeGeometry />
-                        <meshBasicMaterial color="#3e2723" />
-                     </mesh>
-                     <ContactShadows resolution={512} scale={20} blur={3} opacity={0.8} color="#1a0f0a" />
-                </>
-            );
-        case AppTheme.CYBERPUNK:
-        default:
-            return (
-                <>
-                    <color attach="background" args={['#010103']} />
-                    <fog attach="fog" args={['#010103', 6, 25]} />
-                    <ambientLight intensity={0.2} />
-                    <pointLight position={[10, 15, 10]} intensity={1.5} color="#38bdf8" />
-                    <spotLight position={[-5, 12, 5]} intensity={2.5} angle={0.3} penumbra={1} color="#38bdf8" castShadow />
-                    <Grid infiniteGrid cellSize={1} sectionSize={4} sectionColor="#1e293b" cellColor="#020205" fadeDistance={25} position={[0, -0.5, 0]} />
-                    <ContactShadows resolution={1024} scale={20} blur={2.5} opacity={0.6} far={10} color="#000" />
-                </>
-            );
+      case AppTheme.CLASSIC:
+        return (
+          <>
+            <ContactShadows resolution={1024} scale={50} blur={2} opacity={0.35} far={10} color="#000" />
+            <Grid infiniteGrid cellSize={0.5} sectionSize={2} sectionColor="#9aa5b1" cellColor="#d3dbe2" fadeDistance={30} position={[0, -0.5, 0]} />
+          </>
+        );
+      case AppTheme.RENAISSANCE:
+        return (
+          <>
+            <spotLight position={[5, 10, 5]} angle={0.5} penumbra={1} intensity={2.6} color="#ffd07b" castShadow />
+            <pointLight position={[-5, 2, -5]} intensity={0.7} color="#ff8f7a" />
+            <Environment preset="sunset" blur={0.8} background={false} />
+            <ContactShadows resolution={1024} scale={50} blur={2.5} opacity={0.6} far={10} color="#000" />
+          </>
+        );
+      case AppTheme.REALISTIC:
+        return (
+          <>
+            <Environment preset="city" background={false} blur={0.6} />
+            <directionalLight position={[-5, 5, 5]} intensity={1.4} castShadow />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
+              <planeGeometry args={[50, 50]} />
+              <MeshReflectorMaterial
+                blur={[300, 100]}
+                resolution={2048}
+                mixBlur={1}
+                mixStrength={60}
+                roughness={0.5}
+                depthScale={1.2}
+                minDepthThreshold={0.4}
+                maxDepthThreshold={1.4}
+                color="#202020"
+                metalness={0.5}
+                mirror={1}
+              />
+            </mesh>
+          </>
+        );
+      case AppTheme.OIL_PAINTING:
+        return (
+          <>
+            <Environment preset="park" blur={1} background={false} />
+            <spotLight position={[0, 10, 0]} intensity={2.4} color="#fff2c4" castShadow />
+            <mesh position={[0, 0, -10]} scale={[20, 10, 1]}>
+              <planeGeometry />
+              <meshBasicMaterial color="#3e2723" transparent opacity={0.45} />
+            </mesh>
+            <ContactShadows resolution={512} scale={20} blur={3} opacity={0.8} color="#1a0f0a" />
+          </>
+        );
+      case AppTheme.CYBERPUNK:
+      default:
+        return (
+          <>
+            <pointLight position={[10, 15, 10]} intensity={1.2} color="#38bdf8" />
+            <spotLight position={[-5, 12, 5]} intensity={2.1} angle={0.3} penumbra={1} color="#38bdf8" castShadow />
+            <Grid infiniteGrid cellSize={1} sectionSize={4} sectionColor="#1e293b" cellColor="#020205" fadeDistance={25} position={[0, -0.5, 0]} />
+            <ContactShadows resolution={1024} scale={20} blur={2.5} opacity={0.6} far={10} color="#000" />
+          </>
+        );
     }
+  })();
+
+  return (
+    <>
+      <TimeSky sky={sky} />
+      {themedLayer}
+    </>
+  );
 };
 
 const AgentScene: React.FC<SceneProps> = ({ 
@@ -513,9 +683,11 @@ const AgentScene: React.FC<SceneProps> = ({
     activeAgent,
     agentSpeech,
     agentStyles = [],
-    theme
+    theme,
+    idleMode = false
 }) => {
   const [webglAvailable, setWebglAvailable] = useState(true);
+  const [sky, setSky] = useState<SkyState>(() => getSkyState(new Date()));
 
   useEffect(() => {
     try {
@@ -529,6 +701,13 @@ const AgentScene: React.FC<SceneProps> = ({
       console.error('WebGL capability check failed:', error);
       setWebglAvailable(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const syncSky = () => setSky(getSkyState(new Date()));
+    syncSky();
+    const timer = setInterval(syncSky, 60 * 1000);
+    return () => clearInterval(timer);
   }, []);
 
   const getStyle = (profileId: string): AgentStyle => {
@@ -551,6 +730,17 @@ const AgentScene: React.FC<SceneProps> = ({
   };
 
   const activeAgentId = activeAgent && activeAgent !== 'System' ? MODEL_TO_AGENT_ID[activeAgent] : undefined;
+  const isIdleStaging = idleMode && !isProcessing;
+  const idleStaging = useMemo(
+    () => ({
+      'AGT-001': { position: [-0.72, 0.38, 1.05] as [number, number, number], role: 'cards' as const, lookTarget: [0.72, 0.38, 1.05] as [number, number, number] },
+      'AGT-002': { position: [0.72, 0.38, 1.05] as [number, number, number], role: 'cards' as const, lookTarget: [-0.72, 0.38, 1.05] as [number, number, number] },
+      'AGT-003': { position: [-3.05, 0.4, -2.25] as [number, number, number], role: 'pond' as const, lookTarget: [0, 0.2, 1] as [number, number, number] },
+      'AGT-004': { position: [2.55, 0.14, -2.05] as [number, number, number], role: 'lying' as const, lookTarget: [1.2, 0.2, -1.4] as [number, number, number] },
+      'AGT-005': { position: [-1.9, 0.28, -1.2] as [number, number, number], role: 'sneak' as const, lookTarget: [0, 0.38, 1.05] as [number, number, number] },
+    }),
+    []
+  );
 
   if (!webglAvailable) {
     return <SceneFallback />;
@@ -560,24 +750,59 @@ const AgentScene: React.FC<SceneProps> = ({
     <SceneErrorBoundary>
       <div className="w-full h-full">
           <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2, 7], fov: 40 }}>
-              <EnvironmentManager theme={theme} />
+              <EnvironmentManager theme={theme} sky={sky} />
 
-              {AGENT_PROFILES.map(profile => (
-                <AgentAvatar
-                  key={profile.id}
-                  name={`${profile.codename} · ${profile.displayName}`}
-                  role={profile.role}
-                  style={getStyle(profile.id)}
-                  position={profile.scenePosition}
-                  isTalking={isProcessing && activeAgentId === profile.id}
-                  isGlitched={isGlitched}
-                  speechText={activeAgentId === profile.id ? agentSpeech : null}
-                  scale={profile.scale}
-                  onClick={() => onAgentClick(profile.id)}
-                  delayIndex={profile.delayIndex}
-                  theme={theme}
-                />
-              ))}
+              {AGENT_PROFILES.map(profile => {
+                const idleConfig = isIdleStaging ? idleStaging[profile.id as keyof typeof idleStaging] : undefined;
+                return (
+                  <AgentAvatar
+                    key={profile.id}
+                    name={`${profile.codename} · ${profile.displayName}`}
+                    role={profile.role}
+                    style={getStyle(profile.id)}
+                    position={idleConfig?.position || profile.scenePosition}
+                    isTalking={isProcessing && activeAgentId === profile.id}
+                    isGlitched={isGlitched}
+                    speechText={activeAgentId === profile.id ? agentSpeech : null}
+                    scale={profile.scale}
+                    onClick={() => onAgentClick(profile.id)}
+                    delayIndex={profile.delayIndex}
+                    theme={theme}
+                    idleMode={isIdleStaging}
+                    idleRole={idleConfig?.role}
+                    lookTarget={idleConfig?.lookTarget}
+                  />
+                );
+              })}
+
+              {isIdleStaging && (
+                <>
+                  <group position={[0, -0.42, 1.05]}>
+                    <mesh position={[0, 0.06, 0]}>
+                      <cylinderGeometry args={[0.55, 0.62, 0.12, 28]} />
+                      <meshStandardMaterial color="#7c5a3d" roughness={0.8} metalness={0.1} />
+                    </mesh>
+                    <mesh position={[-0.09, 0.13, 0.02]} rotation={[-Math.PI / 2 + 0.04, 0, 0.2]}>
+                      <planeGeometry args={[0.16, 0.24]} />
+                      <meshStandardMaterial color="#f8fafc" roughness={0.9} metalness={0.05} />
+                    </mesh>
+                    <mesh position={[0.08, 0.13, -0.01]} rotation={[-Math.PI / 2 + 0.03, 0, -0.18]}>
+                      <planeGeometry args={[0.16, 0.24]} />
+                      <meshStandardMaterial color="#f8fafc" roughness={0.9} metalness={0.05} />
+                    </mesh>
+                  </group>
+                  <group position={[-3.05, -0.47, -2.25]}>
+                    <mesh>
+                      <cylinderGeometry args={[0.7, 0.7, 0.12, 28]} />
+                      <meshStandardMaterial color="#324f3b" roughness={1} metalness={0} />
+                    </mesh>
+                    <mesh position={[0, 0.04, 0]}>
+                      <cylinderGeometry args={[0.55, 0.55, 0.04, 28]} />
+                      <meshStandardMaterial color="#4cc9f0" transparent opacity={0.7} metalness={0.1} roughness={0.2} />
+                    </mesh>
+                  </group>
+                </>
+              )}
 
               <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
                   <mesh position={[-4, 5, -5]}>
