@@ -44,7 +44,17 @@ const runTextWorkflow = async (
   return res;
 };
 
-export const checkApiHealth = async (): Promise<boolean> => checkOllamaHealth();
+export const checkApiHealth = async (): Promise<boolean> => {
+  const ollamaHealthy = await checkOllamaHealth();
+  if (ollamaHealthy) return true;
+
+  try {
+    const resp = await fetch('/api/chat', { method: 'OPTIONS' });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+};
 
 export const runThinkingWorkflow = async (
   prompt: string,

@@ -20,6 +20,7 @@ import LearnSkillModal from './components/LearnSkillModal';
 import LiveAudioInterface from './components/LiveAudioInterface';
 import AgentSettingsModal from './components/AgentSettingsModal';
 import { AGENT_PROFILES, AGENT_PROFILE_BY_ID, DEFAULT_AGENT_ID, isAgentId, AgentId } from './agentProfiles';
+import { runDialogueChat } from './services/dialogueService';
 
 interface DialogueMessage {
   id: string;
@@ -68,6 +69,7 @@ const App: React.FC = () => {
   // Theme State
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(AppTheme.CYBERPUNK);
   const [isDialogueMode, setIsDialogueMode] = useState(true);
+  const [isDialoguePanelExpanded, setIsDialoguePanelExpanded] = useState(false);
   const [activeDialogueAgentId, setActiveDialogueAgentId] = useState<AgentId>(DEFAULT_AGENT_ID);
   const [dialogueMessages, setDialogueMessages] = useState<DialogueMessage[]>(() => {
     const starter = AGENT_PROFILE_BY_ID[DEFAULT_AGENT_ID];
@@ -265,12 +267,14 @@ const App: React.FC = () => {
     () => dialogueMessages.filter(message => message.agentId === activeDialogueAgentId),
     [dialogueMessages, activeDialogueAgentId]
   );
+  const latestDialogueMessage = activeDialogueMessages[activeDialogueMessages.length - 1];
 
   const handleAgentSelection = (candidateId?: string) => {
     if (!candidateId || !isAgentId(candidateId)) return;
     const profile = AGENT_PROFILE_BY_ID[candidateId];
     setActiveDialogueAgentId(candidateId);
     setIsDialogueMode(true);
+    setIsDialoguePanelExpanded(true);
     setAgentSpeech(`${profile.displayName} 已连接。`);
     if (!dialogueMessages.some(msg => msg.agentId === candidateId && msg.speaker === 'agent')) {
       setDialogueMessages(prev => [
@@ -292,9 +296,11 @@ const App: React.FC = () => {
 
     const profile = AGENT_PROFILE_BY_ID[activeDialogueAgentId];
     const history = activeDialogueMessages
-      .slice(-6)
-      .map(msg => `${msg.speaker === 'user' ? '用户' : profile.displayName}: ${msg.text}`)
-      .join('\n');
+      .slice(-10)
+      .map(msg => ({
+        role: msg.speaker === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.text,
+      }));
 
     setDialogueMessages(prev => [
       ...prev,
@@ -308,25 +314,13 @@ const App: React.FC = () => {
     ]);
 
     setInput('');
+    setIsDialoguePanelExpanded(true);
     setState(prev => ({ ...prev, isRunning: true, currentStage: WorkflowType.CHAT, result: null }));
-    setActiveModel(profile.modelHint || ModelProvider.GEMINI);
+    setActiveModel(profile.modelHint || ModelProvider.OLLAMA);
     activeBotTriggerRef.current = null;
 
-    const personaPrompt = [
-      `你正在扮演多智能体团队成员：${profile.displayName}（${profile.codename}）。`,
-      `职责：${profile.role}。`,
-      `人格特征：${profile.quirk}`,
-      '对话规则：',
-      '- 全程中文，口吻自然拟人化。',
-      '- 回答 2-4 句，优先给可执行建议。',
-      '- 如果信息不足，先问一个最关键问题再给临时方案。',
-      '[最近对话]',
-      history || '（无）',
-      `[用户最新输入] ${textToProcess}`
-    ].join('\n');
-
     try {
-      const result = await runSmartRoute(personaPrompt, addLog);
+      const result = await runDialogueChat(profile.id, history, textToProcess);
       const trimmedResult = result.trim() || '收到，我正在整理你的请求。';
       setDialogueMessages(prev => [
         ...prev,
@@ -483,55 +477,69 @@ const App: React.FC = () => {
                  </div>
                )}
                {isDialogueMode && (
-                 <div className={`w-full max-w-3xl h-[68vh] backdrop-blur-3xl border rounded-3xl shadow-2xl pointer-events-auto animate-fade-in-up flex flex-col overflow-hidden ${panelBgClass}`}>
-                    <div className={`px-5 py-4 border-b ${isLightTheme ? 'border-black/10 bg-black/5' : 'border-white/10 bg-white/5'} flex flex-col gap-3`}>
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
+                 <div className="absolute left-2 right-2 bottom-2 md:left-4 md:right-auto md:w-[430px] z-30 pointer-events-auto">
+                   <div className={`backdrop-blur-2xl border rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up ${panelBgClass}`}>
+                      <div className={`px-4 py-3 border-b ${isLightTheme ? 'border-black/10 bg-black/5' : 'border-white/10 bg-black/30'} flex items-start justify-between gap-3`}>
+                        <div className="min-w-0">
                           <p className="text-[9px] uppercase font-black tracking-[0.2em] text-cyan-500">Dialogue Channel</p>
-                          <p className={`text-xs font-bold mt-1 ${isLightTheme ? 'text-slate-800' : 'text-white'}`}>
+                          <p className={`text-xs font-bold mt-1 truncate ${isLightTheme ? 'text-slate-800' : 'text-white'}`}>
                             {AGENT_PROFILE_BY_ID[activeDialogueAgentId].displayName} · {AGENT_PROFILE_BY_ID[activeDialogueAgentId].codename}
                           </p>
-                          <p className={`text-[10px] mt-1 ${isLightTheme ? 'text-slate-500' : 'text-slate-300'}`}>
-                            {AGENT_PROFILE_BY_ID[activeDialogueAgentId].role}
+                          <p className={`text-[10px] mt-1 truncate ${isLightTheme ? 'text-slate-500' : 'text-slate-300'}`}>
+                            {latestDialogueMessage?.text || '选择一个 Agent 开始对话'}
                           </p>
                         </div>
-                        <div className={`text-[10px] font-mono px-2 py-1 rounded-lg border ${isLightTheme ? 'border-black/10 text-slate-500' : 'border-white/10 text-slate-300'}`}>
-                          {state.isRunning ? 'RESPONDING...' : 'ONLINE'}
-                        </div>
-                      </div>
-                      <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
-                        {AGENT_PROFILES.map(profile => (
-                          <button
-                            key={profile.id}
-                            onClick={() => handleAgentSelection(profile.id)}
-                            className={`px-3 py-1.5 rounded-xl border text-[9px] font-black tracking-wide whitespace-nowrap transition-all ${
-                              profile.id === activeDialogueAgentId
-                                ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
-                                : `${isLightTheme ? 'border-black/10 text-slate-600 hover:bg-black/5' : 'border-white/10 text-slate-300 hover:bg-white/5'}`
-                            }`}
-                          >
-                            {profile.codename}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div ref={dialogueScrollRef} className={`flex-1 p-4 overflow-y-auto custom-scrollbar space-y-3 ${isLightTheme ? 'bg-white/30' : 'bg-black/20'}`}>
-                      {activeDialogueMessages.length === 0 && (
-                        <p className={`text-[11px] ${isLightTheme ? 'text-slate-500' : 'text-slate-400'}`}>开始一条消息，和当前 Agent 进入对话。</p>
-                      )}
-                      {activeDialogueMessages.map(msg => (
-                        <div key={msg.id} className={`flex ${msg.speaker === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] px-3 py-2 rounded-2xl border ${msg.speaker === 'user'
-                            ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-50'
-                            : `${isLightTheme ? 'bg-white border-black/10 text-slate-700' : 'bg-black/50 border-white/10 text-slate-100'}`}`}>
-                            <p className="text-[11px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                            <p className={`mt-1 text-[9px] ${msg.speaker === 'user' ? 'text-cyan-200/70' : (isLightTheme ? 'text-slate-400' : 'text-slate-400')}`}>
-                              {msg.timestamp}
-                            </p>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className={`text-[10px] font-mono px-2 py-1 rounded-lg border ${isLightTheme ? 'border-black/10 text-slate-500' : 'border-white/10 text-slate-300'}`}>
+                            {state.isRunning ? 'RESPONDING...' : 'ONLINE'}
                           </div>
+                          <button
+                            onClick={() => setIsDialoguePanelExpanded(prev => !prev)}
+                            className={`text-[9px] font-black px-2.5 py-1 rounded-lg border transition-colors ${isLightTheme ? 'border-black/10 text-slate-600 hover:bg-black/5' : 'border-white/10 text-slate-300 hover:bg-white/10'}`}
+                          >
+                            {isDialoguePanelExpanded ? '收起' : '展开'}
+                          </button>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                      {isDialoguePanelExpanded && (
+                        <>
+                          <div className={`px-4 py-2 border-b ${isLightTheme ? 'border-black/10 bg-black/5' : 'border-white/10 bg-black/20'}`}>
+                            <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
+                              {AGENT_PROFILES.map(profile => (
+                                <button
+                                  key={profile.id}
+                                  onClick={() => handleAgentSelection(profile.id)}
+                                  className={`px-3 py-1.5 rounded-xl border text-[9px] font-black tracking-wide whitespace-nowrap transition-all ${
+                                    profile.id === activeDialogueAgentId
+                                      ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
+                                      : `${isLightTheme ? 'border-black/10 text-slate-600 hover:bg-black/5' : 'border-white/10 text-slate-300 hover:bg-white/5'}`
+                                  }`}
+                                >
+                                  {profile.codename}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div ref={dialogueScrollRef} className={`h-64 p-3 overflow-y-auto custom-scrollbar space-y-3 ${isLightTheme ? 'bg-white/30' : 'bg-black/20'}`}>
+                            {activeDialogueMessages.length === 0 && (
+                              <p className={`text-[11px] ${isLightTheme ? 'text-slate-500' : 'text-slate-400'}`}>开始一条消息，和当前 Agent 进入对话。</p>
+                            )}
+                            {activeDialogueMessages.map(msg => (
+                              <div key={msg.id} className={`flex ${msg.speaker === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[86%] px-3 py-2 rounded-2xl border ${msg.speaker === 'user'
+                                  ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-50'
+                                  : `${isLightTheme ? 'bg-white border-black/10 text-slate-700' : 'bg-black/50 border-white/10 text-slate-100'}`}`}>
+                                  <p className="text-[11px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                  <p className={`mt-1 text-[9px] ${msg.speaker === 'user' ? 'text-cyan-200/70' : 'text-slate-400'}`}>
+                                    {msg.timestamp}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                   </div>
                  </div>
                )}
                {!isDialogueMode && state.result && (
@@ -565,6 +573,12 @@ const App: React.FC = () => {
                         placeholder={isDialogueMode ? `对 ${AGENT_PROFILE_BY_ID[activeDialogueAgentId].displayName} 说点什么...` : (isThinkingMode ? "DEEP_REASONING_MODE_ACTIVE..." : "INPUT_DIRECTIVE_VECTOR_HERE...")}
                         value={input}
                         onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (isDialogueMode && e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleDialogueSend();
+                          }
+                        }}
                     />
                     <button 
                       onClick={() => fileInputRef.current?.click()}

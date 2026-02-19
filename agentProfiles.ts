@@ -27,13 +27,13 @@ export const AGENT_PROFILES: AgentProfile[] = [
     scale: 1.18,
     delayIndex: 1,
     defaultStyle: {
-      color: '#3b82f6',
+      color: '#7dd3fc',
       shape: 'sphere',
       hasBody: true,
       hasArms: true,
       faceType: 'human',
-      skinTone: '#f1c7a8',
-      hairColor: '#1f2937'
+      skinTone: '#ffd9c2',
+      hairColor: '#334155'
     }
   },
   {
@@ -47,13 +47,13 @@ export const AGENT_PROFILES: AgentProfile[] = [
     scale: 1.02,
     delayIndex: 0,
     defaultStyle: {
-      color: '#f59e0b',
-      shape: 'box',
+      color: '#fbbf24',
+      shape: 'sphere',
       hasBody: true,
       hasArms: true,
       faceType: 'human',
-      skinTone: '#f4ccaf',
-      hairColor: '#4b5563'
+      skinTone: '#f8d8bd',
+      hairColor: '#475569'
     }
   },
   {
@@ -67,13 +67,13 @@ export const AGENT_PROFILES: AgentProfile[] = [
     scale: 1.02,
     delayIndex: 2,
     defaultStyle: {
-      color: '#ec4899',
-      shape: 'dodecahedron',
+      color: '#f472b6',
+      shape: 'sphere',
       hasBody: true,
       hasArms: true,
       faceType: 'human',
-      skinTone: '#f0c9a6',
-      hairColor: '#111827'
+      skinTone: '#f3d2ba',
+      hairColor: '#1e293b'
     }
   },
   {
@@ -87,13 +87,13 @@ export const AGENT_PROFILES: AgentProfile[] = [
     scale: 0.9,
     delayIndex: 3,
     defaultStyle: {
-      color: '#10b981',
-      shape: 'octahedron',
+      color: '#34d399',
+      shape: 'sphere',
       hasBody: true,
       hasArms: true,
       faceType: 'human',
-      skinTone: '#eec09d',
-      hairColor: '#2f2b5f'
+      skinTone: '#f0c9a8',
+      hairColor: '#4338ca'
     }
   },
   {
@@ -106,13 +106,13 @@ export const AGENT_PROFILES: AgentProfile[] = [
     scale: 0.92,
     delayIndex: 4,
     defaultStyle: {
-      color: '#8b5cf6',
+      color: '#a78bfa',
       shape: 'sphere',
       hasBody: true,
       hasArms: true,
       faceType: 'human',
-      skinTone: '#e9bc99',
-      hairColor: '#312e81'
+      skinTone: '#efc9ac',
+      hairColor: '#3730a3'
     }
   }
 ];

@@ -197,10 +197,10 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
   const renderHeadGeometry = () => {
       switch(style.shape) {
           case 'box': return <boxGeometry args={[0.5, 0.5, 0.5]} />;
-          case 'octahedron': return <octahedronGeometry args={[0.3]} />;
-          case 'dodecahedron': return <dodecahedronGeometry args={[0.3]} />;
+          case 'octahedron': return <octahedronGeometry args={[0.32]} />;
+          case 'dodecahedron': return <dodecahedronGeometry args={[0.32]} />;
           case 'sphere': 
-          default: return <sphereGeometry args={[0.25, 32, 32]} />;
+          default: return <sphereGeometry args={[0.28, 32, 32]} />;
       }
   };
 
@@ -228,7 +228,7 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
       
       <Float speed={isTalking ? 5 : 2} rotationIntensity={0.2} floatIntensity={0.2}>
           {/* Head */}
-          <mesh ref={headRef} position={[0, 0.65, 0]}>
+          <mesh ref={headRef} position={[0, 0.72, 0]}>
             {renderHeadGeometry()}
             <MeshDistortMaterial 
                 color={headColor} 
@@ -237,30 +237,38 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
                 {...matProps}
             />
             {isHumanFace && (
-                <group position={[0, 0.02, 0.23]}>
-                    <mesh position={[-0.07, 0.05, 0.02]}>
-                        <sphereGeometry args={[0.03, 16, 16]} />
+                <group position={[0, 0.01, 0.24]}>
+                    <mesh position={[-0.075, 0.06, 0.02]}>
+                        <sphereGeometry args={[0.032, 16, 16]} />
                         <meshStandardMaterial color="#fffaf5" />
                     </mesh>
-                    <mesh position={[0.07, 0.05, 0.02]}>
-                        <sphereGeometry args={[0.03, 16, 16]} />
+                    <mesh position={[0.075, 0.06, 0.02]}>
+                        <sphereGeometry args={[0.032, 16, 16]} />
                         <meshStandardMaterial color="#fffaf5" />
                     </mesh>
-                    <mesh position={[-0.07, 0.05, 0.045]}>
-                        <sphereGeometry args={[0.014, 12, 12]} />
+                    <mesh position={[-0.075, 0.06, 0.047]}>
+                        <sphereGeometry args={[0.012, 12, 12]} />
                         <meshStandardMaterial color="#111827" />
                     </mesh>
-                    <mesh position={[0.07, 0.05, 0.045]}>
-                        <sphereGeometry args={[0.014, 12, 12]} />
+                    <mesh position={[0.075, 0.06, 0.047]}>
+                        <sphereGeometry args={[0.012, 12, 12]} />
                         <meshStandardMaterial color="#111827" />
                     </mesh>
-                    <mesh position={[0, -0.02, 0.04]}>
-                        <sphereGeometry args={[0.011, 12, 12]} />
+                    <mesh position={[-0.12, -0.005, 0.04]}>
+                        <sphereGeometry args={[0.018, 12, 12]} />
+                        <meshStandardMaterial color="#f9b4c6" transparent opacity={0.65} />
+                    </mesh>
+                    <mesh position={[0.12, -0.005, 0.04]}>
+                        <sphereGeometry args={[0.018, 12, 12]} />
+                        <meshStandardMaterial color="#f9b4c6" transparent opacity={0.65} />
+                    </mesh>
+                    <mesh position={[0, -0.015, 0.04]}>
+                        <sphereGeometry args={[0.009, 12, 12]} />
                         <meshStandardMaterial color="#d9a98d" />
                     </mesh>
-                    <mesh position={[0, -0.08, 0.03]} rotation={[Math.PI * 0.1, 0, 0]}>
-                        <torusGeometry args={[0.035, 0.006, 8, 18, Math.PI]} />
-                        <meshStandardMaterial color="#7f1d1d" />
+                    <mesh position={[0, -0.085, 0.03]} rotation={[Math.PI, 0, 0]}>
+                        <torusGeometry args={[0.03, 0.0045, 8, 24, Math.PI]} />
+                        <meshStandardMaterial color="#7c2d12" />
                     </mesh>
                     <mesh position={[0, 0.17, 0.02]}>
                         <sphereGeometry args={[0.18, 22, 22, 0, Math.PI * 2, 0, Math.PI / 2]} />
@@ -361,7 +369,7 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
                 <div className={`px-3 py-1 ${theme === AppTheme.CLASSIC ? 'bg-white border-black text-black' : 'bg-black/90 border-white/20 text-white'} border rounded-full text-[10px] font-bold tracking-tighter whitespace-nowrap shadow-2xl mb-1 flex items-center gap-2 ${isSpawning ? 'animate-pulse' : ''}`} style={theme === AppTheme.CLASSIC ? {} : { color: style.color }}>
                     <span>{name}</span>
                     <span className="opacity-50">|</span>
-                    <span className="text-[8px] font-mono opacity-80">{role}</span>
+                    <span className="text-[8px] font-mono opacity-80 max-w-[170px] truncate">{role}</span>
                 </div>
                 {speechText && (
                     <div className={`${theme === AppTheme.CLASSIC ? 'bg-black text-white' : 'bg-white/95 backdrop-blur-md text-black'} px-4 py-2 rounded-2xl rounded-bl-none shadow-2xl animate-bounce-slow border border-white/20`}>
@@ -558,7 +566,7 @@ const AgentScene: React.FC<SceneProps> = ({
                 <AgentAvatar
                   key={profile.id}
                   name={`${profile.codename} · ${profile.displayName}`}
-                  role={`${profile.role} // ${profile.quirk}`}
+                  role={profile.role}
                   style={getStyle(profile.id)}
                   position={profile.scenePosition}
                   isTalking={isProcessing && activeAgentId === profile.id}
