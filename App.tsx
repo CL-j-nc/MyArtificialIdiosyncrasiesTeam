@@ -285,10 +285,10 @@ const App: React.FC = () => {
           />
       </div>
 
-      <div className="relative z-10 w-full h-full flex flex-col pointer-events-none p-4 gap-4">
-        <header className="flex justify-between items-start pointer-events-auto h-16">
-           <div className="flex gap-4">
-              <div className={`backdrop-blur-md border rounded-2xl p-3 flex items-center gap-4 shadow-2xl ${panelBgClass}`}>
+      <div className="relative z-10 w-full h-full flex flex-col pointer-events-none p-3 md:p-4 gap-3 md:gap-4">
+        <header className="flex flex-wrap justify-between items-start gap-3 pointer-events-auto min-h-16">
+           <div className="flex gap-3 max-w-full">
+              <div className={`backdrop-blur-md border rounded-2xl p-3 flex items-center gap-3 shadow-2xl max-w-full ${panelBgClass}`}>
                 <div className={`w-3 h-3 rounded-full ${state.isRunning ? 'bg-amber-400 animate-pulse' : 'bg-cyan-500'}`}></div>
                 <div>
                    <h1 className={`text-xs font-black tracking-tighter uppercase leading-none ${isLightTheme ? 'text-black' : 'text-white'}`}>ORCHESTRATOR::NODE_01</h1>
@@ -312,7 +312,7 @@ const App: React.FC = () => {
               </div>
            </div>
            
-           <div className="flex gap-3">
+           <div className="flex flex-wrap gap-2 justify-end">
               {/* Theme Selector */}
               <div className={`backdrop-blur-md border rounded-2xl p-1 flex shadow-2xl ${panelBgClass}`}>
                   {[AppTheme.CYBERPUNK, AppTheme.CLASSIC, AppTheme.REALISTIC, AppTheme.RENAISSANCE, AppTheme.OIL_PAINTING].map(t => (
@@ -342,11 +342,14 @@ const App: React.FC = () => {
               <button onClick={() => setLeftPanelOpen(!leftPanelOpen)} className={`w-10 h-10 rounded-2xl border flex items-center justify-center transition-all ${leftPanelOpen ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : `${panelBgClass} ${isLightTheme ? 'text-black/50 hover:text-black' : 'text-white/30 hover:text-white'}`}`}>
                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
               </button>
+              <button onClick={() => setRightPanelOpen(!rightPanelOpen)} className={`w-10 h-10 rounded-2xl border flex items-center justify-center transition-all ${rightPanelOpen ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : `${panelBgClass} ${isLightTheme ? 'text-black/50 hover:text-black' : 'text-white/30 hover:text-white'}`}`}>
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+              </button>
            </div>
         </header>
 
-        <main className="flex-1 flex gap-6 overflow-hidden relative">
-            <div className={`transition-all duration-500 ${leftPanelOpen ? 'w-[340px] opacity-100' : 'w-0 opacity-0 pointer-events-none'}`}>
+        <main className="flex-1 min-h-0 flex flex-col xl:flex-row gap-3 xl:gap-6 overflow-hidden relative">
+            <div className={`shrink-0 transition-all duration-500 overflow-hidden ${leftPanelOpen ? 'w-full xl:w-[340px] opacity-100 max-h-[40vh] xl:max-h-none' : 'w-0 opacity-0 pointer-events-none max-h-0'}`}>
                <TelegramWidget 
                   bots={bots}
                   onUpdateBots={handleBotsChange}
@@ -356,7 +359,7 @@ const App: React.FC = () => {
                />
             </div>
             
-            <div className="flex-1 flex items-center justify-center relative">
+            <div className="flex-1 min-h-[220px] xl:min-h-0 flex items-center justify-center relative">
                {isLiveActive && (
                  <div className="absolute inset-0 z-50 pointer-events-auto">
                     <LiveAudioInterface onClose={() => setIsLiveActive(false)} addLog={addLog} />
@@ -380,16 +383,16 @@ const App: React.FC = () => {
                )}
             </div>
 
-            <div className={`transition-all duration-500 ${rightPanelOpen ? 'w-[400px] opacity-100' : 'w-0 opacity-0 pointer-events-none'}`}>
+            <div className={`shrink-0 transition-all duration-500 overflow-hidden ${rightPanelOpen ? 'w-full xl:w-[400px] opacity-100 max-h-[40vh] xl:max-h-none' : 'w-0 opacity-0 pointer-events-none max-h-0'}`}>
                <TerminalWindow logs={state.logs} isProcessing={state.isRunning} />
             </div>
         </main>
 
-        <footer className="h-40 flex justify-center items-end pointer-events-auto">
-            <div className={`w-full max-w-5xl backdrop-blur-2xl border rounded-3xl p-5 shadow-2xl flex gap-6 items-center ${panelBgClass}`}>
+        <footer className="h-auto flex justify-center items-end pointer-events-auto pb-1 xl:pb-0">
+            <div className={`w-full max-w-6xl backdrop-blur-2xl border rounded-3xl p-4 md:p-5 shadow-2xl flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch lg:items-center ${panelBgClass}`}>
                 <div className="flex-1 relative flex items-center">
                     <textarea 
-                        className={`w-full border text-[13px] py-4 px-5 pr-12 rounded-2xl outline-none resize-none h-20 font-mono transition-all custom-scrollbar leading-relaxed ${isLightTheme ? 'bg-white/50 border-black/10 text-black placeholder:text-black/30 focus:border-cyan-500' : 'bg-black/50 border-white/5 text-white placeholder:text-white/10 focus:border-cyan-500/40'}`}
+                        className={`w-full border text-[13px] py-4 px-5 pr-12 rounded-2xl outline-none resize-none h-24 lg:h-20 font-mono transition-all custom-scrollbar leading-relaxed ${isLightTheme ? 'bg-white/50 border-black/10 text-black placeholder:text-black/30 focus:border-cyan-500' : 'bg-black/50 border-white/5 text-white placeholder:text-white/10 focus:border-cyan-500/40'}`}
                         placeholder={isThinkingMode ? "DEEP_REASONING_MODE_ACTIVE..." : "INPUT_DIRECTIVE_VECTOR_HERE..."}
                         value={input}
                         onChange={e => setInput(e.target.value)}
@@ -401,18 +404,18 @@ const App: React.FC = () => {
                     </button>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={handleFileUpload} />
                 </div>
-                <div className="flex flex-col gap-3 shrink-0">
+                <div className="flex flex-row lg:flex-col gap-3 shrink-0">
                     <button 
                         onClick={() => handleRunWorkflow(WorkflowType.SMART_ROUTE)}
                         disabled={state.isRunning || !input.trim()}
-                        className="bg-cyan-600 hover:bg-cyan-500 text-black h-12 px-10 rounded-2xl text-[11px] font-black tracking-widest shadow-2xl disabled:opacity-20 uppercase"
+                        className="w-full lg:w-auto bg-cyan-600 hover:bg-cyan-500 text-black h-12 px-10 rounded-2xl text-[11px] font-black tracking-widest shadow-2xl disabled:opacity-20 uppercase"
                     >
                        EXECUTE
                     </button>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full">
                       <button 
                         onClick={() => setIsThinkingMode(!isThinkingMode)}
-                        className={`text-[9px] font-black px-3 py-1.5 rounded-xl transition-all border ${isThinkingMode ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)]' : `${isLightTheme ? 'bg-black/5 border-black/5 text-black/40' : 'bg-white/5 border-white/5 text-white/30'}`}`}
+                        className={`w-full text-[9px] font-black px-3 py-1.5 rounded-xl transition-all border ${isThinkingMode ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)]' : `${isLightTheme ? 'bg-black/5 border-black/5 text-black/40' : 'bg-white/5 border-white/5 text-white/30'}`}`}
                       >
                          THINKING_32K
                       </button>
