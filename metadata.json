@@ -1,0 +1,8 @@
+{
+  "name": "CORE AI Orchestrator",
+  "description": "A macOS-terminal styled React application that visualizes and executes complex multi-model AI workflows (Gemini, Groq, Ollama simulation) and manages Telegram Bot integrations.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
