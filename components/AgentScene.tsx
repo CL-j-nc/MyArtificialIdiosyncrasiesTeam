@@ -37,13 +37,45 @@ const AGENT_FUNCTION_SCRIPT: Record<string, string[]> = {
 };
 
 const LEAD_BRAIN_LOBES: Array<{ position: [number, number, number]; radius: number }> = [
-  { position: [-0.13, 0.85, 0.05], radius: 0.1 },
-  { position: [0.13, 0.85, 0.05], radius: 0.1 },
-  { position: [-0.17, 0.76, 0.12], radius: 0.08 },
-  { position: [0.17, 0.76, 0.12], radius: 0.08 },
-  { position: [-0.16, 0.72, -0.08], radius: 0.09 },
-  { position: [0.16, 0.72, -0.08], radius: 0.09 },
-  { position: [0, 0.9, -0.03], radius: 0.08 },
+  { position: [-0.18, 0.86, 0.04], radius: 0.082 },
+  { position: [-0.14, 0.78, 0.14], radius: 0.076 },
+  { position: [-0.15, 0.72, -0.08], radius: 0.074 },
+  { position: [-0.09, 0.9, -0.02], radius: 0.07 },
+  { position: [0.18, 0.86, 0.04], radius: 0.082 },
+  { position: [0.14, 0.78, 0.14], radius: 0.076 },
+  { position: [0.15, 0.72, -0.08], radius: 0.074 },
+  { position: [0.09, 0.9, -0.02], radius: 0.07 },
+];
+
+const LEAD_BRAIN_GYRI_PATHS: [number, number, number][][] = [
+  [
+    [-0.24, 0.85, 0.08],
+    [-0.2, 0.9, 0.14],
+    [-0.14, 0.87, 0.1],
+    [-0.1, 0.91, 0.15],
+    [-0.06, 0.86, 0.08],
+  ],
+  [
+    [-0.24, 0.78, -0.01],
+    [-0.19, 0.83, 0.05],
+    [-0.13, 0.8, 0.01],
+    [-0.08, 0.84, 0.06],
+    [-0.05, 0.79, 0.01],
+  ],
+  [
+    [-0.23, 0.72, -0.1],
+    [-0.18, 0.76, -0.02],
+    [-0.12, 0.73, -0.08],
+    [-0.08, 0.77, -0.01],
+    [-0.04, 0.72, -0.06],
+  ],
+  [
+    [-0.2, 0.68, 0.12],
+    [-0.15, 0.73, 0.19],
+    [-0.1, 0.7, 0.13],
+    [-0.06, 0.74, 0.19],
+    [-0.03, 0.69, 0.12],
+  ],
 ];
 
 const LEAD_CURRENT_RINGS: Array<{
@@ -270,6 +302,7 @@ const AgentAvatar: React.FC<AgentProps> = ({
   const rippleBRef = useRef<THREE.Mesh>(null);
   const leadCurrentRingRefs = useRef<Array<THREE.Mesh | null>>([]);
   const leadCurrentPathRefs = useRef<Array<THREE.Mesh | null>>([]);
+  const leadGyriRefs = useRef<Array<THREE.Mesh | null>>([]);
   const leadSparkRefs = useRef<Array<THREE.Mesh | null>>([]);
   
   const [spawned, setSpawned] = useState(false);
@@ -293,6 +326,15 @@ const AgentAvatar: React.FC<AgentProps> = ({
       ),
     []
   );
+  const leadBrainGyriCurves = useMemo(() => {
+    const left = LEAD_BRAIN_GYRI_PATHS.map(
+      (path) => new THREE.CatmullRomCurve3(path.map(([x, y, z]) => new THREE.Vector3(x, y, z)))
+    );
+    const right = LEAD_BRAIN_GYRI_PATHS.map(
+      (path) => new THREE.CatmullRomCurve3(path.map(([x, y, z]) => new THREE.Vector3(-x, y, z)))
+    );
+    return [...left, ...right];
+  }, []);
 
   useEffect(() => {
     if (group.current) {
@@ -498,6 +540,14 @@ const AgentAvatar: React.FC<AgentProps> = ({
         }
       });
 
+      leadGyriRefs.current.forEach((ridge, index) => {
+        if (!ridge) return;
+        const material = ridge.material;
+        if (material instanceof THREE.MeshStandardMaterial) {
+          material.emissiveIntensity = 0.36 + Math.sin(t * 4.2 + index * 0.8) * 0.12;
+        }
+      });
+
       leadSparkRefs.current.forEach((spark, index) => {
         if (!spark) return;
         const angle = t * (1.8 + index * 0.4) + index * 2.15;
@@ -554,29 +604,70 @@ const AgentAvatar: React.FC<AgentProps> = ({
           {/* Head */}
           {isLeadAgent ? (
             <>
-              <mesh ref={headRef} position={[0, 0.78, 0]}>
-                <sphereGeometry args={[0.27, 40, 40]} />
+              <mesh ref={headRef} position={[0, 0.79, 0.02]} scale={[0.95, 0.82, 1.02]}>
+                <sphereGeometry args={[0.2, 40, 40]} />
                 <meshStandardMaterial
-                  color={isGlitched ? '#ff6475' : '#dbeafe'}
-                  metalness={0.45}
-                  roughness={0.28}
+                  color={isGlitched ? '#fb7185' : '#f9a8d4'}
+                  metalness={0.16}
+                  roughness={0.38}
                   transparent
-                  opacity={0.94}
-                  emissive={isGlitched ? '#ff1f3d' : '#0ea5e9'}
-                  emissiveIntensity={1.05}
+                  opacity={0.96}
+                  emissive={isGlitched ? '#e11d48' : '#db2777'}
+                  emissiveIntensity={0.54}
                 />
+              </mesh>
+              <mesh position={[-0.115, 0.79, 0.03]} scale={[1, 0.94, 1.08]}>
+                <sphereGeometry args={[0.22, 40, 40]} />
+                <meshStandardMaterial
+                  color="#fbcfe8"
+                  roughness={0.42}
+                  metalness={0.08}
+                  emissive="#f472b6"
+                  emissiveIntensity={0.26}
+                />
+              </mesh>
+              <mesh position={[0.115, 0.79, 0.03]} scale={[1, 0.94, 1.08]}>
+                <sphereGeometry args={[0.22, 40, 40]} />
+                <meshStandardMaterial
+                  color="#fbcfe8"
+                  roughness={0.42}
+                  metalness={0.08}
+                  emissive="#f472b6"
+                  emissiveIntensity={0.26}
+                />
+              </mesh>
+              <mesh position={[0, 0.79, 0.09]}>
+                <capsuleGeometry args={[0.018, 0.24, 8, 14]} />
+                <meshStandardMaterial color="#831843" roughness={0.5} metalness={0.05} />
+              </mesh>
+              <mesh position={[0, 0.71, -0.06]} scale={[0.74, 0.52, 0.72]}>
+                <sphereGeometry args={[0.16, 24, 24]} />
+                <meshStandardMaterial color="#f9a8d4" roughness={0.45} metalness={0.08} />
               </mesh>
               {LEAD_BRAIN_LOBES.map((lobe, index) => (
                 <mesh key={`lead-lobe-${index}`} position={lobe.position}>
-                  <sphereGeometry args={[lobe.radius, 24, 24]} />
+                  <sphereGeometry args={[lobe.radius, 22, 22]} />
                   <meshStandardMaterial
-                    color="#bfdbfe"
-                    roughness={0.32}
-                    metalness={0.22}
-                    emissive="#38bdf8"
-                    emissiveIntensity={0.38}
-                    transparent
-                    opacity={0.84}
+                    color="#fbcfe8"
+                    roughness={0.48}
+                    metalness={0.05}
+                    emissive="#ec4899"
+                    emissiveIntensity={0.22}
+                  />
+                </mesh>
+              ))}
+              {leadBrainGyriCurves.map((curve, index) => (
+                <mesh
+                  key={`lead-gyrus-${index}`}
+                  ref={(node) => { leadGyriRefs.current[index] = node; }}
+                >
+                  <tubeGeometry args={[curve, 52, 0.01, 8, false]} />
+                  <meshStandardMaterial
+                    color="#fdf2f8"
+                    roughness={0.44}
+                    metalness={0.08}
+                    emissive="#ec4899"
+                    emissiveIntensity={0.36}
                   />
                 </mesh>
               ))}
