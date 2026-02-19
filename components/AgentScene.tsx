@@ -562,6 +562,65 @@ const getSkyState = (now: Date): SkyState => {
   return { phase: 'night', cycle: Math.max(0, Math.min(1, nightCycle)) };
 };
 
+const SunDeity: React.FC<{ position: [number, number, number]; phase: SkyPhase }> = ({ position, phase }) => {
+  const coreColor = phase === 'sunset' ? '#ffad76' : phase === 'sunrise' ? '#ffd58a' : '#ffe07a';
+  const auraColor = phase === 'sunset' ? '#ff8c66' : '#ffcf5c';
+
+  return (
+    <group position={position}>
+      <mesh>
+        <sphereGeometry args={[0.58, 32, 32]} />
+        <meshBasicMaterial color={coreColor} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.72, 0.86, 48]} />
+        <meshBasicMaterial color={auraColor} transparent opacity={0.8} side={THREE.DoubleSide} />
+      </mesh>
+      {Array.from({ length: 10 }).map((_, index) => {
+        const angle = (index / 10) * Math.PI * 2;
+        const x = Math.cos(angle) * 1.02;
+        const y = Math.sin(angle) * 1.02;
+        return (
+          <mesh key={`sun-ray-${index}`} position={[x, y, 0]} rotation={[0, 0, angle - Math.PI / 2]}>
+            <coneGeometry args={[0.08, 0.34, 8]} />
+            <meshBasicMaterial color={auraColor} />
+          </mesh>
+        );
+      })}
+
+      {/* Sun deity face */}
+      <mesh position={[-0.15, 0.09, 0.54]}>
+        <sphereGeometry args={[0.055, 12, 12]} />
+        <meshBasicMaterial color="#5b3a1d" />
+      </mesh>
+      <mesh position={[0.15, 0.09, 0.54]}>
+        <sphereGeometry args={[0.055, 12, 12]} />
+        <meshBasicMaterial color="#5b3a1d" />
+      </mesh>
+      <mesh position={[0, -0.02, 0.56]}>
+        <sphereGeometry args={[0.03, 12, 12]} />
+        <meshBasicMaterial color="#8f5a2a" />
+      </mesh>
+      <mesh position={[0, -0.2, 0.54]} rotation={[Math.PI, 0, 0]}>
+        <torusGeometry args={[0.16, 0.018, 8, 20, Math.PI]} />
+        <meshBasicMaterial color="#8f5a2a" />
+      </mesh>
+
+      {/* Crown */}
+      <mesh position={[0, 0.43, 0.52]}>
+        <torusGeometry args={[0.24, 0.03, 10, 22]} />
+        <meshBasicMaterial color="#fbbf24" />
+      </mesh>
+      {[-0.16, 0, 0.16].map((x, idx) => (
+        <mesh key={`sun-crown-${idx}`} position={[x, 0.6, 0.54]}>
+          <coneGeometry args={[0.05, 0.15, 8]} />
+          <meshBasicMaterial color="#f59e0b" />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 const TimeSky: React.FC<{ sky: SkyState }> = ({ sky }) => {
   const isNight = sky.phase === 'night';
   const sunPos =
@@ -583,10 +642,7 @@ const TimeSky: React.FC<{ sky: SkyState }> = ({ sky }) => {
         color={isNight ? '#9ab6ff' : '#ffd58f'}
       />
       {!isNight && (
-        <mesh position={sunPos as [number, number, number]}>
-          <sphereGeometry args={[0.52, 24, 24]} />
-          <meshBasicMaterial color={sky.phase === 'sunset' ? '#ffb16b' : '#ffd57e'} />
-        </mesh>
+        <SunDeity position={sunPos as [number, number, number]} phase={sky.phase} />
       )}
       {isNight && (
         <>
