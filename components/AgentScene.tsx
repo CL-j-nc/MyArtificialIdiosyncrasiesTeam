@@ -1,6 +1,6 @@
 
-import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Canvas, useFrame, ThreeElements, useLoader } from '@react-three/fiber';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { Canvas, useFrame, ThreeElements, useLoader, useThree } from '@react-three/fiber';
 import { 
     OrbitControls, 
     Environment, 
@@ -27,6 +27,14 @@ declare global {
 // Cubic Bezier Ease Out Function
 const easeOutCubic = (t: number): number => {
     return 1 - Math.pow(1 - t, 3);
+};
+
+const AGENT_FUNCTION_LABEL: Record<string, string> = {
+  'AGT-001': 'TASK EXECUTION LEAD',
+  'AGT-002': 'EDGE CASE SPECIALIST',
+  'AGT-003': 'DOCS & COMMUNICATION',
+  'AGT-004': 'INCIDENT RESPONSE',
+  'AGT-005': 'RESEARCH & ARCHITECTURE',
 };
 
 // Holographic beam during spawn
@@ -63,6 +71,39 @@ const SpawnBeam: React.FC<{ active: boolean, color: string }> = ({ active, color
   );
 };
 
+const CameraFocusTracker: React.FC<{
+  targets: Array<{ id: string; position: [number, number, number] }>;
+  onFocusChange: (id?: string) => void;
+}> = ({ targets, onFocusChange }) => {
+  const { camera } = useThree();
+  const lastFocusedIdRef = useRef<string | undefined>(undefined);
+
+  useFrame(() => {
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+
+    let bestId: string | undefined;
+    let bestScore = -1;
+    for (const target of targets) {
+      const toTarget = new THREE.Vector3(...target.position).sub(camera.position).normalize();
+      const score = forward.dot(toTarget);
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = target.id;
+      }
+    }
+
+    // Only treat as focused when the agent is close to screen center.
+    const nextFocusedId = bestScore > 0.94 ? bestId : undefined;
+    if (nextFocusedId !== lastFocusedIdRef.current) {
+      lastFocusedIdRef.current = nextFocusedId;
+      onFocusChange(nextFocusedId);
+    }
+  });
+
+  return null;
+};
+
 interface AgentProps {
   name: string;
   role: string;
@@ -78,6 +119,8 @@ interface AgentProps {
   idleMode?: boolean;
   idleRole?: 'corner' | 'pair' | 'cards' | 'pond' | 'lying' | 'sneak';
   lookTarget?: [number, number, number];
+  reflectionActive?: boolean;
+  functionLabel?: string;
 }
 
 const CustomTextureFace: React.FC<{ url: string }> = ({ url }) => {
@@ -105,12 +148,16 @@ const AgentAvatar: React.FC<AgentProps> = ({
   idleMode = false,
   idleRole,
   lookTarget,
+  reflectionActive = false,
+  functionLabel,
 }) => {
   const group = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Mesh>(null);
   const bodyRef = useRef<THREE.Mesh>(null);
   const leftArmRef = useRef<THREE.Mesh>(null);
   const rightArmRef = useRef<THREE.Mesh>(null);
+  const rippleARef = useRef<THREE.Mesh>(null);
+  const rippleBRef = useRef<THREE.Mesh>(null);
   
   const [spawned, setSpawned] = useState(false);
   const [isSpawning, setIsSpawning] = useState(false);
@@ -274,6 +321,19 @@ const AgentAvatar: React.FC<AgentProps> = ({
         }
     }
 
+    if (rippleARef.current && rippleBRef.current) {
+      const waveA = 1 + Math.sin(t * 2.2) * 0.12;
+      const waveB = 1 + Math.sin(t * 2.2 + Math.PI) * 0.12;
+      const baseWave = reflectionActive ? 1.02 : 0.96;
+      rippleARef.current.scale.setScalar(baseWave * waveA);
+      rippleBRef.current.scale.setScalar(baseWave * waveB);
+
+      const matA = rippleARef.current.material as THREE.MeshBasicMaterial;
+      const matB = rippleBRef.current.material as THREE.MeshBasicMaterial;
+      matA.opacity = reflectionActive ? 0.5 : 0.12;
+      matB.opacity = reflectionActive ? 0.36 : 0.08;
+    }
+
     if (bodyRef.current && spawned) {
         const opacity = isSpawning ? (Math.random() > 0.5 ? 0.8 : 0.3) : (isGlitched ? 0.6 : 1);
         if (bodyRef.current.material instanceof THREE.MeshStandardMaterial) {
@@ -433,6 +493,44 @@ const AgentAvatar: React.FC<AgentProps> = ({
                     <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
                 </mesh>
             </>
+          )}
+
+          <group position={[0, -0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <mesh>
+              <circleGeometry args={[0.46, 48]} />
+              <MeshReflectorMaterial
+                blur={[140, 40]}
+                resolution={512}
+                mixBlur={0.8}
+                mixStrength={reflectionActive ? 35 : 15}
+                roughness={0.45}
+                depthScale={0.2}
+                minDepthThreshold={0.4}
+                maxDepthThreshold={1.2}
+                color={reflectionActive ? '#2dd4bf' : '#17303a'}
+                metalness={0.2}
+                mirror={0.8}
+              />
+            </mesh>
+            <mesh ref={rippleARef} position={[0, 0.002, 0]}>
+              <ringGeometry args={[0.12, 0.17, 48]} />
+              <meshBasicMaterial color="#67e8f9" transparent opacity={0.12} side={THREE.DoubleSide} />
+            </mesh>
+            <mesh ref={rippleBRef} position={[0, 0.003, 0]}>
+              <ringGeometry args={[0.22, 0.28, 48]} />
+              <meshBasicMaterial color="#22d3ee" transparent opacity={0.08} side={THREE.DoubleSide} />
+            </mesh>
+          </group>
+          {functionLabel && (
+            <Html position={[0, -0.44, 0]} center distanceFactor={7.2} pointerEvents="none">
+              <div className={`px-2 py-1 rounded-full border text-[8px] font-black tracking-wider uppercase whitespace-nowrap transition-all ${
+                reflectionActive
+                  ? 'bg-cyan-400/20 border-cyan-300/70 text-cyan-100'
+                  : 'bg-slate-900/25 border-white/15 text-white/45'
+              }`}>
+                {functionLabel}
+              </div>
+            </Html>
           )}
 
           {idleMode && idleRole === 'cards' && (
@@ -744,6 +842,7 @@ const AgentScene: React.FC<SceneProps> = ({
 }) => {
   const [webglAvailable, setWebglAvailable] = useState(true);
   const [sky, setSky] = useState<SkyState>(() => getSkyState(new Date()));
+  const [cameraFocusedAgentId, setCameraFocusedAgentId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     try {
@@ -797,6 +896,25 @@ const AgentScene: React.FC<SceneProps> = ({
     }),
     []
   );
+  const renderAgents = useMemo(
+    () =>
+      AGENT_PROFILES.map((profile) => {
+        const idleConfig = isIdleStaging ? idleStaging[profile.id as keyof typeof idleStaging] : undefined;
+        return {
+          profile,
+          idleConfig,
+          position: idleConfig?.position || profile.scenePosition,
+        };
+      }),
+    [idleStaging, isIdleStaging]
+  );
+  const cameraTargets = useMemo(
+    () => renderAgents.map((item) => ({ id: item.profile.id, position: item.position })),
+    [renderAgents]
+  );
+  const handleCameraFocusChange = useCallback((id?: string) => {
+    setCameraFocusedAgentId((prev) => (prev === id ? prev : id));
+  }, []);
 
   if (!webglAvailable) {
     return <SceneFallback />;
@@ -807,16 +925,17 @@ const AgentScene: React.FC<SceneProps> = ({
       <div className="w-full h-full">
           <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2, 7], fov: 40 }}>
               <EnvironmentManager theme={theme} sky={sky} />
+              <CameraFocusTracker targets={cameraTargets} onFocusChange={handleCameraFocusChange} />
 
-              {AGENT_PROFILES.map(profile => {
-                const idleConfig = isIdleStaging ? idleStaging[profile.id as keyof typeof idleStaging] : undefined;
+              {renderAgents.map(({ profile, idleConfig, position }) => {
+                const isFocused = cameraFocusedAgentId === profile.id;
                 return (
                   <AgentAvatar
                     key={profile.id}
                     name={`${profile.codename} · ${profile.displayName}`}
                     role={profile.role}
                     style={getStyle(profile.id)}
-                    position={idleConfig?.position || profile.scenePosition}
+                    position={position}
                     isTalking={isProcessing && activeAgentId === profile.id}
                     isGlitched={isGlitched}
                     speechText={activeAgentId === profile.id ? agentSpeech : null}
@@ -827,6 +946,8 @@ const AgentScene: React.FC<SceneProps> = ({
                     idleMode={isIdleStaging}
                     idleRole={idleConfig?.role}
                     lookTarget={idleConfig?.lookTarget}
+                    reflectionActive={isFocused || (isProcessing && activeAgentId === profile.id)}
+                    functionLabel={AGENT_FUNCTION_LABEL[profile.id]}
                   />
                 );
               })}
