@@ -6,7 +6,6 @@ import {
     Environment, 
     ContactShadows, 
     Float, 
-    Grid,
     MeshDistortMaterial,
     MeshWobbleMaterial,
     Html,
@@ -36,6 +35,48 @@ const AGENT_FUNCTION_SCRIPT: Record<string, string[]> = {
   'AGT-004': ['DETECT INCIDENT SIGNALS', 'CONTAIN / MITIGATE / RECOVER', 'RESTORE SERVICE FAST'],
   'AGT-005': ['MAP ARCHITECTURE PATTERNS', 'EXPLORE DEEP OPTIONS', 'DESIGN FUTURE SYSTEMS'],
 };
+
+const LEAD_BRAIN_LOBES: Array<{ position: [number, number, number]; radius: number }> = [
+  { position: [-0.13, 0.85, 0.05], radius: 0.1 },
+  { position: [0.13, 0.85, 0.05], radius: 0.1 },
+  { position: [-0.17, 0.76, 0.12], radius: 0.08 },
+  { position: [0.17, 0.76, 0.12], radius: 0.08 },
+  { position: [-0.16, 0.72, -0.08], radius: 0.09 },
+  { position: [0.16, 0.72, -0.08], radius: 0.09 },
+  { position: [0, 0.9, -0.03], radius: 0.08 },
+];
+
+const LEAD_CURRENT_RINGS: Array<{
+  position: [number, number, number];
+  rotation: [number, number, number];
+  args: [number, number, number, number, number];
+}> = [
+  { position: [0, 0.78, 0], rotation: [Math.PI / 2, 0, 0], args: [0.26, 0.012, 8, 64, Math.PI * 1.5] },
+  { position: [0, 0.78, 0], rotation: [Math.PI / 3, Math.PI / 4, 0.3], args: [0.22, 0.01, 8, 64, Math.PI * 1.45] },
+  { position: [0, 0.78, 0], rotation: [Math.PI / 4, -Math.PI / 3, 0.9], args: [0.2, 0.009, 8, 64, Math.PI * 1.38] },
+];
+
+const LEAD_CURRENT_PATHS: [number, number, number][][] = [
+  [
+    [-0.2, 0.75, -0.05],
+    [-0.11, 0.85, 0.07],
+    [0.02, 0.79, -0.02],
+    [0.14, 0.88, 0.06],
+    [0.2, 0.74, -0.04],
+  ],
+  [
+    [-0.16, 0.67, 0.08],
+    [-0.05, 0.76, 0.14],
+    [0.08, 0.72, 0.02],
+    [0.18, 0.81, 0.09],
+  ],
+  [
+    [-0.18, 0.84, -0.12],
+    [-0.08, 0.92, -0.03],
+    [0.03, 0.86, -0.09],
+    [0.15, 0.93, -0.01],
+  ],
+];
 
 // Holographic beam during spawn
 const SpawnBeam: React.FC<{ active: boolean, color: string }> = ({ active, color }) => {
@@ -227,6 +268,9 @@ const AgentAvatar: React.FC<AgentProps> = ({
   const rightArmRef = useRef<THREE.Mesh>(null);
   const rippleARef = useRef<THREE.Mesh>(null);
   const rippleBRef = useRef<THREE.Mesh>(null);
+  const leadCurrentRingRefs = useRef<Array<THREE.Mesh | null>>([]);
+  const leadCurrentPathRefs = useRef<Array<THREE.Mesh | null>>([]);
+  const leadSparkRefs = useRef<Array<THREE.Mesh | null>>([]);
   
   const [spawned, setSpawned] = useState(false);
   const [isSpawning, setIsSpawning] = useState(false);
@@ -240,6 +284,14 @@ const AgentAvatar: React.FC<AgentProps> = ({
   const lookTargetVec = useMemo(
     () => (lookTarget ? new THREE.Vector3(...lookTarget) : null),
     [lookTarget]
+  );
+  const isLeadAgent = style.id === 'AGT-001';
+  const leadCurrentCurves = useMemo(
+    () =>
+      LEAD_CURRENT_PATHS.map((path) =>
+        new THREE.CatmullRomCurve3(path.map(([x, y, z]) => new THREE.Vector3(x, y, z)))
+      ),
+    []
   );
 
   useEffect(() => {
@@ -327,41 +379,63 @@ const AgentAvatar: React.FC<AgentProps> = ({
     
     if (headRef.current && spawned) {
         const flicker = isSpawning ? (Math.random() > 0.5 ? 1.2 : 0.8) : 1;
-        
-        if (isGlitched) {
-            headRef.current.position.x = Math.sin(t * 40) * 0.04;
-            headRef.current.scale.setScalar(1 + Math.sin(t * 25) * 0.05);
-        } else {
-            headRef.current.position.x = 0;
-            headRef.current.scale.setScalar(flicker);
-        }
 
-        if (isTalking) {
-            headRef.current.rotation.x = Math.sin(t * 12) * 0.15;
-            headRef.current.rotation.y = Math.sin(t * 8) * 0.1;
-        } else if (idlePose && (idleRole === 'pair' || idleRole === 'cards')) {
-            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -0.03, 0.08);
-            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0, 0.08);
-        } else if (idlePose && idleRole === 'pond') {
-            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.22, 0.08);
-            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, Math.sin(t * 0.8) * 0.2, 0.06);
-        } else if (idlePose && idleRole === 'lying') {
-            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.35, 0.1);
-            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, -0.28, 0.1);
-        } else if (idlePose && idleRole === 'sneak') {
-            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -0.08, 0.08);
-            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0.25, 0.08);
-        } else if (idlePose && idleRole === 'corner') {
-            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.08, 0.08);
-            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0.2, 0.08);
+        if (isLeadAgent) {
+            const meditativeLift = Math.sin(t * (isTalking ? 3.2 : 2.2)) * 0.018;
+            headRef.current.position.x = isGlitched ? Math.sin(t * 32) * 0.02 : 0;
+            headRef.current.position.y = 0.78 + meditativeLift;
+            headRef.current.scale.setScalar(1 + Math.sin(t * 1.8) * 0.02 + (isSpawning ? 0.03 : 0));
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, isTalking ? 0.08 : 0.04, 0.08);
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, Math.sin(t * 0.7) * 0.08, 0.06);
+
+            const leadMaterial = headRef.current.material;
+            if (leadMaterial instanceof THREE.MeshStandardMaterial) {
+              leadMaterial.emissiveIntensity =
+                (isTalking ? 1.5 : 1.05) + Math.sin(t * 5.4) * 0.28 + (isGlitched ? 0.5 : 0);
+            }
         } else {
-            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0, 0.1);
-            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0, 0.1);
+            if (isGlitched) {
+                headRef.current.position.x = Math.sin(t * 40) * 0.04;
+                headRef.current.scale.setScalar(1 + Math.sin(t * 25) * 0.05);
+            } else {
+                headRef.current.position.x = 0;
+                headRef.current.scale.setScalar(flicker);
+            }
+
+            if (isTalking) {
+                headRef.current.rotation.x = Math.sin(t * 12) * 0.15;
+                headRef.current.rotation.y = Math.sin(t * 8) * 0.1;
+            } else if (idlePose && (idleRole === 'pair' || idleRole === 'cards')) {
+                headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -0.03, 0.08);
+                headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0, 0.08);
+            } else if (idlePose && idleRole === 'pond') {
+                headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.22, 0.08);
+                headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, Math.sin(t * 0.8) * 0.2, 0.06);
+            } else if (idlePose && idleRole === 'lying') {
+                headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.35, 0.1);
+                headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, -0.28, 0.1);
+            } else if (idlePose && idleRole === 'sneak') {
+                headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -0.08, 0.08);
+                headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0.25, 0.08);
+            } else if (idlePose && idleRole === 'corner') {
+                headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0.08, 0.08);
+                headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0.2, 0.08);
+            } else {
+                headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, 0, 0.1);
+                headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, 0, 0.1);
+            }
         }
     }
 
     if (leftArmRef.current && rightArmRef.current && spawned) {
-        if (idlePose && idleRole === 'cards') {
+        if (isLeadAgent) {
+            leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.92, 0.12);
+            rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.92, 0.12);
+            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -0.42, 0.12);
+            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, -0.42, 0.12);
+            leftArmRef.current.rotation.y = THREE.MathUtils.lerp(leftArmRef.current.rotation.y, -0.2, 0.12);
+            rightArmRef.current.rotation.y = THREE.MathUtils.lerp(rightArmRef.current.rotation.y, 0.2, 0.12);
+        } else if (idlePose && idleRole === 'cards') {
             leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.65, 0.12);
             leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -0.3, 0.12);
             rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.65, 0.12);
@@ -401,6 +475,39 @@ const AgentAvatar: React.FC<AgentProps> = ({
       const matB = rippleBRef.current.material as THREE.MeshBasicMaterial;
       matA.opacity = reflectionActive ? 0.5 : 0.12;
       matB.opacity = reflectionActive ? 0.36 : 0.08;
+    }
+
+    if (isLeadAgent) {
+      leadCurrentRingRefs.current.forEach((ring, index) => {
+        if (!ring) return;
+        ring.rotation.z += delta * (0.28 + index * 0.07);
+        ring.rotation.y += delta * (0.15 + index * 0.05);
+        const material = ring.material;
+        if (material instanceof THREE.MeshStandardMaterial) {
+          material.emissiveIntensity = 1.1 + Math.sin(t * 5.8 + index * 1.3) * 0.4 + (isTalking ? 0.3 : 0);
+          material.opacity = 0.48 + Math.sin(t * 3.2 + index) * 0.12;
+        }
+      });
+
+      leadCurrentPathRefs.current.forEach((path, index) => {
+        if (!path) return;
+        const material = path.material;
+        if (material instanceof THREE.MeshStandardMaterial) {
+          material.emissiveIntensity = 1.2 + Math.sin(t * 7 + index * 1.4) * 0.6 + (isTalking ? 0.45 : 0);
+          material.opacity = 0.72 + Math.sin(t * 4.6 + index) * 0.18;
+        }
+      });
+
+      leadSparkRefs.current.forEach((spark, index) => {
+        if (!spark) return;
+        const angle = t * (1.8 + index * 0.4) + index * 2.15;
+        const radius = 0.11 + index * 0.05;
+        spark.position.set(Math.cos(angle) * radius, 0.78 + Math.sin(angle * 1.4) * 0.08, Math.sin(angle) * 0.12);
+        const sparkMaterial = spark.material;
+        if (sparkMaterial instanceof THREE.MeshBasicMaterial) {
+          sparkMaterial.opacity = 0.55 + Math.sin(t * 8 + index) * 0.25;
+        }
+      });
     }
 
     if (bodyRef.current && spawned) {
@@ -445,122 +552,242 @@ const AgentAvatar: React.FC<AgentProps> = ({
       
       <Float speed={isTalking ? 5 : 2} rotationIntensity={0.2} floatIntensity={0.2}>
           {/* Head */}
-          <mesh ref={headRef} position={[0, 0.72, 0]}>
-            {renderHeadGeometry()}
-            <MeshDistortMaterial 
-                color={headColor} 
-                distort={isHumanFace ? (isSpawning ? 0.25 : (isTalking ? 0.12 : 0)) : (isSpawning ? 0.8 : (isTalking ? 0.4 : 0))} 
-                speed={isSpawning ? 6 : (isTalking ? 4 : 2)} 
-                {...matProps}
-            />
-            {isHumanFace && (
-                <group position={[0, 0.01, 0.24]}>
-                    <mesh position={[-0.075, 0.06, 0.02]}>
-                        <sphereGeometry args={[0.032, 16, 16]} />
-                        <meshStandardMaterial color="#fffaf5" />
-                    </mesh>
-                    <mesh position={[0.075, 0.06, 0.02]}>
-                        <sphereGeometry args={[0.032, 16, 16]} />
-                        <meshStandardMaterial color="#fffaf5" />
-                    </mesh>
-                    <mesh position={[-0.075, 0.06, 0.047]}>
-                        <sphereGeometry args={[0.012, 12, 12]} />
-                        <meshStandardMaterial color="#111827" />
-                    </mesh>
-                    <mesh position={[0.075, 0.06, 0.047]}>
-                        <sphereGeometry args={[0.012, 12, 12]} />
-                        <meshStandardMaterial color="#111827" />
-                    </mesh>
-                    <mesh position={[-0.12, -0.005, 0.04]}>
-                        <sphereGeometry args={[0.018, 12, 12]} />
-                        <meshStandardMaterial color="#f9b4c6" transparent opacity={0.65} />
-                    </mesh>
-                    <mesh position={[0.12, -0.005, 0.04]}>
-                        <sphereGeometry args={[0.018, 12, 12]} />
-                        <meshStandardMaterial color="#f9b4c6" transparent opacity={0.65} />
-                    </mesh>
-                    <mesh position={[0, -0.015, 0.04]}>
-                        <sphereGeometry args={[0.009, 12, 12]} />
-                        <meshStandardMaterial color="#d9a98d" />
-                    </mesh>
-                    <mesh position={[0, -0.085, 0.03]} rotation={[Math.PI, 0, 0]}>
-                        <torusGeometry args={[0.03, 0.0045, 8, 24, Math.PI]} />
-                        <meshStandardMaterial color="#7c2d12" />
-                    </mesh>
-                    <mesh position={[0, 0.17, 0.02]}>
-                        <sphereGeometry args={[0.18, 22, 22, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                        <meshStandardMaterial color={hairColor} roughness={0.9} metalness={0.1} />
-                    </mesh>
-                </group>
-            )}
-            {style.faceType === 'visor' && (
-                <mesh position={[0, 0.03, 0.22]}>
-                    <boxGeometry args={[0.3, 0.06, 0.05]} />
-                    <meshStandardMaterial 
-                        color="#000" 
-                        emissive={isSpawning || isTalking ? style.color : (isGlitched ? "#f00" : "#fff")} 
-                        emissiveIntensity={isSpawning ? 10 : (isTalking ? 5 : 0.5)} 
-                    />
-                </mesh>
-            )}
-            {style.faceType === 'monitor' && (
-                <mesh position={[0, 0, 0.2]}>
-                    <planeGeometry args={[0.4, 0.3]} />
-                    <meshBasicMaterial color="black" />
-                    <Html position={[0,0,0.01]} transform scale={0.2} pointerEvents="none">
-                        <div className="w-full h-full flex items-center justify-center">
-                            <div className={`text-[40px] font-mono font-bold ${isTalking ? 'animate-pulse' : ''}`} style={{color: style.color}}>
-                                {isTalking ? '^ ^' : '- -'}
-                            </div>
-                        </div>
-                    </Html>
-                </mesh>
-            )}
-            {style.faceType === 'texture' && style.textureUrl && (
-               <React.Suspense fallback={null}>
-                  <CustomTextureFace url={style.textureUrl} />
-               </React.Suspense>
-            )}
-          </mesh>
-          
-          {/* Body */}
-          {style.hasBody && !(idleMode && idleRole === 'pond') && (
-            <mesh ref={bodyRef} position={[0, 0.1, 0]}>
-                <capsuleGeometry args={[0.18, 0.5, 4, 12]} />
-                <meshStandardMaterial 
-                    color={isHumanFace ? style.color : (theme === AppTheme.CLASSIC ? '#555' : "#0a0a0f")} 
-                    roughness={isHumanFace ? 0.85 : (theme === AppTheme.REALISTIC ? 0.2 : 0.1)} 
-                    metalness={isHumanFace ? 0.2 : 0.9} 
-                    transparent 
-                    opacity={theme === AppTheme.CLASSIC ? 0.8 : 1}
+          {isLeadAgent ? (
+            <>
+              <mesh ref={headRef} position={[0, 0.78, 0]}>
+                <sphereGeometry args={[0.27, 40, 40]} />
+                <meshStandardMaterial
+                  color={isGlitched ? '#ff6475' : '#dbeafe'}
+                  metalness={0.45}
+                  roughness={0.28}
+                  transparent
+                  opacity={0.94}
+                  emissive={isGlitched ? '#ff1f3d' : '#0ea5e9'}
+                  emissiveIntensity={1.05}
                 />
+              </mesh>
+              {LEAD_BRAIN_LOBES.map((lobe, index) => (
+                <mesh key={`lead-lobe-${index}`} position={lobe.position}>
+                  <sphereGeometry args={[lobe.radius, 24, 24]} />
+                  <meshStandardMaterial
+                    color="#bfdbfe"
+                    roughness={0.32}
+                    metalness={0.22}
+                    emissive="#38bdf8"
+                    emissiveIntensity={0.38}
+                    transparent
+                    opacity={0.84}
+                  />
+                </mesh>
+              ))}
+              {LEAD_CURRENT_RINGS.map((ring, index) => (
+                <mesh
+                  key={`lead-current-ring-${index}`}
+                  ref={(node) => { leadCurrentRingRefs.current[index] = node; }}
+                  position={ring.position}
+                  rotation={ring.rotation}
+                >
+                  <torusGeometry args={ring.args} />
+                  <meshStandardMaterial
+                    color="#a5f3fc"
+                    emissive="#22d3ee"
+                    emissiveIntensity={1.05}
+                    roughness={0.18}
+                    metalness={0.58}
+                    transparent
+                    opacity={0.5}
+                  />
+                </mesh>
+              ))}
+              {leadCurrentCurves.map((curve, index) => (
+                <mesh
+                  key={`lead-current-path-${index}`}
+                  ref={(node) => { leadCurrentPathRefs.current[index] = node; }}
+                >
+                  <tubeGeometry args={[curve, 56, 0.007, 8, false]} />
+                  <meshStandardMaterial
+                    color="#cffafe"
+                    emissive="#22d3ee"
+                    emissiveIntensity={1.2}
+                    roughness={0.2}
+                    metalness={0.45}
+                    transparent
+                    opacity={0.76}
+                  />
+                </mesh>
+              ))}
+              {[0, 1, 2].map((index) => (
+                <mesh
+                  key={`lead-spark-${index}`}
+                  ref={(node) => { leadSparkRefs.current[index] = node; }}
+                  position={[0, 0.78, 0]}
+                >
+                  <sphereGeometry args={[0.018 - index * 0.003, 12, 12]} />
+                  <meshBasicMaterial color="#67e8f9" transparent opacity={0.55} />
+                </mesh>
+              ))}
+            </>
+          ) : (
+            <mesh ref={headRef} position={[0, 0.72, 0]}>
+              {renderHeadGeometry()}
+              <MeshDistortMaterial 
+                  color={headColor} 
+                  distort={isHumanFace ? (isSpawning ? 0.25 : (isTalking ? 0.12 : 0)) : (isSpawning ? 0.8 : (isTalking ? 0.4 : 0))} 
+                  speed={isSpawning ? 6 : (isTalking ? 4 : 2)} 
+                  {...matProps}
+              />
+              {isHumanFace && (
+                  <group position={[0, 0.01, 0.24]}>
+                      <mesh position={[-0.075, 0.06, 0.02]}>
+                          <sphereGeometry args={[0.032, 16, 16]} />
+                          <meshStandardMaterial color="#fffaf5" />
+                      </mesh>
+                      <mesh position={[0.075, 0.06, 0.02]}>
+                          <sphereGeometry args={[0.032, 16, 16]} />
+                          <meshStandardMaterial color="#fffaf5" />
+                      </mesh>
+                      <mesh position={[-0.075, 0.06, 0.047]}>
+                          <sphereGeometry args={[0.012, 12, 12]} />
+                          <meshStandardMaterial color="#111827" />
+                      </mesh>
+                      <mesh position={[0.075, 0.06, 0.047]}>
+                          <sphereGeometry args={[0.012, 12, 12]} />
+                          <meshStandardMaterial color="#111827" />
+                      </mesh>
+                      <mesh position={[-0.12, -0.005, 0.04]}>
+                          <sphereGeometry args={[0.018, 12, 12]} />
+                          <meshStandardMaterial color="#f9b4c6" transparent opacity={0.65} />
+                      </mesh>
+                      <mesh position={[0.12, -0.005, 0.04]}>
+                          <sphereGeometry args={[0.018, 12, 12]} />
+                          <meshStandardMaterial color="#f9b4c6" transparent opacity={0.65} />
+                      </mesh>
+                      <mesh position={[0, -0.015, 0.04]}>
+                          <sphereGeometry args={[0.009, 12, 12]} />
+                          <meshStandardMaterial color="#d9a98d" />
+                      </mesh>
+                      <mesh position={[0, -0.085, 0.03]} rotation={[Math.PI, 0, 0]}>
+                          <torusGeometry args={[0.03, 0.0045, 8, 24, Math.PI]} />
+                          <meshStandardMaterial color="#7c2d12" />
+                      </mesh>
+                      <mesh position={[0, 0.17, 0.02]}>
+                          <sphereGeometry args={[0.18, 22, 22, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                          <meshStandardMaterial color={hairColor} roughness={0.9} metalness={0.1} />
+                      </mesh>
+                  </group>
+              )}
+              {style.faceType === 'visor' && (
+                  <mesh position={[0, 0.03, 0.22]}>
+                      <boxGeometry args={[0.3, 0.06, 0.05]} />
+                      <meshStandardMaterial 
+                          color="#000" 
+                          emissive={isSpawning || isTalking ? style.color : (isGlitched ? "#f00" : "#fff")} 
+                          emissiveIntensity={isSpawning ? 10 : (isTalking ? 5 : 0.5)} 
+                      />
+                  </mesh>
+              )}
+              {style.faceType === 'monitor' && (
+                  <mesh position={[0, 0, 0.2]}>
+                      <planeGeometry args={[0.4, 0.3]} />
+                      <meshBasicMaterial color="black" />
+                      <Html position={[0,0,0.01]} transform scale={0.2} pointerEvents="none">
+                          <div className="w-full h-full flex items-center justify-center">
+                              <div className={`text-[40px] font-mono font-bold ${isTalking ? 'animate-pulse' : ''}`} style={{color: style.color}}>
+                                  {isTalking ? '^ ^' : '- -'}
+                              </div>
+                          </div>
+                      </Html>
+                  </mesh>
+              )}
+              {style.faceType === 'texture' && style.textureUrl && (
+                 <React.Suspense fallback={null}>
+                    <CustomTextureFace url={style.textureUrl} />
+                 </React.Suspense>
+              )}
             </mesh>
           )}
-
-          {style.hasBody && isHumanFace && !(idleMode && idleRole === 'pond') && (
-            <>
-              <mesh position={[-0.09, -0.34, 0]}>
-                  <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
-                  <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+          
+          {/* Body */}
+          {isLeadAgent ? (
+            <group>
+              <mesh ref={bodyRef} position={[0, 0.16, 0]} rotation={[0.06, 0, 0]}>
+                <capsuleGeometry args={[0.16, 0.34, 8, 16]} />
+                <meshStandardMaterial
+                  color="#0f172a"
+                  roughness={0.22}
+                  metalness={0.72}
+                  emissive="#0e7490"
+                  emissiveIntensity={0.45}
+                  transparent
+                  opacity={0.96}
+                />
               </mesh>
-              <mesh position={[0.09, -0.34, 0]}>
-                  <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
-                  <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+              <mesh position={[0, -0.03, 0.02]} rotation={[0.08, 0, 0]}>
+                <torusGeometry args={[0.21, 0.09, 16, 44, Math.PI * 1.96]} />
+                <meshStandardMaterial color="#1f2937" roughness={0.3} metalness={0.45} />
               </mesh>
-            </>
-          )}
-
-          {/* Arms */}
-          {style.hasArms && !(idleMode && idleRole === 'pond') && (
+              <mesh position={[-0.18, -0.13, 0.12]} rotation={[0.16, 0.35, 1.1]}>
+                <capsuleGeometry args={[0.05, 0.24, 6, 12]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.25} metalness={0.62} />
+              </mesh>
+              <mesh position={[0.18, -0.13, 0.12]} rotation={[0.16, -0.35, -1.1]}>
+                <capsuleGeometry args={[0.05, 0.24, 6, 12]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.25} metalness={0.62} />
+              </mesh>
+              <mesh ref={leftArmRef} position={[-0.19, 0.13, 0.12]}>
+                <capsuleGeometry args={[0.036, 0.24, 6, 10]} />
+                <meshStandardMaterial color="#38bdf8" roughness={0.4} metalness={0.45} emissive="#0891b2" emissiveIntensity={0.4} />
+              </mesh>
+              <mesh ref={rightArmRef} position={[0.19, 0.13, 0.12]}>
+                <capsuleGeometry args={[0.036, 0.24, 6, 10]} />
+                <meshStandardMaterial color="#38bdf8" roughness={0.4} metalness={0.45} emissive="#0891b2" emissiveIntensity={0.4} />
+              </mesh>
+              <mesh position={[0, -0.16, 0]}>
+                <cylinderGeometry args={[0.34, 0.38, 0.1, 48]} />
+                <meshStandardMaterial color="#082f49" roughness={0.5} metalness={0.5} emissive="#155e75" emissiveIntensity={0.35} />
+              </mesh>
+            </group>
+          ) : (
             <>
-                <mesh ref={leftArmRef} position={[-0.25, 0.3, 0]}>
-                    <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
-                    <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
+              {style.hasBody && !(idleMode && idleRole === 'pond') && (
+                <mesh ref={bodyRef} position={[0, 0.1, 0]}>
+                    <capsuleGeometry args={[0.18, 0.5, 4, 12]} />
+                    <meshStandardMaterial 
+                        color={isHumanFace ? style.color : (theme === AppTheme.CLASSIC ? '#555' : "#0a0a0f")} 
+                        roughness={isHumanFace ? 0.85 : (theme === AppTheme.REALISTIC ? 0.2 : 0.1)} 
+                        metalness={isHumanFace ? 0.2 : 0.9} 
+                        transparent 
+                        opacity={theme === AppTheme.CLASSIC ? 0.8 : 1}
+                    />
                 </mesh>
-                <mesh ref={rightArmRef} position={[0.25, 0.3, 0]}>
-                    <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
-                    <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
-                </mesh>
+              )}
+
+              {style.hasBody && isHumanFace && !(idleMode && idleRole === 'pond') && (
+                <>
+                  <mesh position={[-0.09, -0.34, 0]}>
+                      <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+                      <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+                  </mesh>
+                  <mesh position={[0.09, -0.34, 0]}>
+                      <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+                      <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+                  </mesh>
+                </>
+              )}
+
+              {/* Arms */}
+              {style.hasArms && !(idleMode && idleRole === 'pond') && (
+                <>
+                    <mesh ref={leftArmRef} position={[-0.25, 0.3, 0]}>
+                        <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
+                        <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
+                    </mesh>
+                    <mesh ref={rightArmRef} position={[0.25, 0.3, 0]}>
+                        <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
+                        <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
+                    </mesh>
+                </>
+              )}
             </>
           )}
 
@@ -818,14 +1045,164 @@ const TimeSky: React.FC<{ sky: SkyState }> = ({ sky }) => {
   );
 };
 
+const SHANHAI_MOUNTAINS: Array<{
+  position: [number, number, number];
+  scale: [number, number, number];
+  colorDay: string;
+  colorNight: string;
+}> = [
+  { position: [-10.5, 1.2, -15], scale: [3.6, 5.6, 3.4], colorDay: '#536652', colorNight: '#1b2830' },
+  { position: [-6.8, 1.0, -13.5], scale: [2.8, 4.6, 2.6], colorDay: '#607260', colorNight: '#263545' },
+  { position: [-2.5, 1.1, -14.2], scale: [3.2, 5.2, 3.1], colorDay: '#4e6150', colorNight: '#1e2d36' },
+  { position: [2.8, 1.0, -14.4], scale: [3.1, 4.8, 2.8], colorDay: '#5c6f5a', colorNight: '#273643' },
+  { position: [7.2, 1.2, -13.8], scale: [3.3, 5.4, 3.2], colorDay: '#526550', colorNight: '#1d2a35' },
+  { position: [11.2, 0.95, -15.2], scale: [2.7, 4.2, 2.6], colorDay: '#61735f', colorNight: '#273746' },
+];
+
+const SHANHAI_FLOATING_ISLANDS: Array<{ position: [number, number, number]; rotation: [number, number, number] }> = [
+  { position: [-4.8, 3.4, -8], rotation: [0.25, 0.5, 0.2] },
+  { position: [0.5, 4.2, -9], rotation: [0.18, -0.4, 0.1] },
+  { position: [5.3, 3.6, -8.5], rotation: [0.22, 0.35, -0.18] },
+];
+
+const ShanhaiRealm: React.FC<{ sky: SkyState }> = ({ sky }) => {
+  const isNight = sky.phase === 'night';
+  const mistRefs = useRef<Array<THREE.Mesh | null>>([]);
+  const glowRefs = useRef<Array<THREE.Mesh | null>>([]);
+
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
+    mistRefs.current.forEach((mist, index) => {
+      if (!mist) return;
+      mist.position.x += Math.sin(t * 0.2 + index) * delta * 0.08;
+      mist.position.z += Math.cos(t * 0.16 + index) * delta * 0.05;
+      const mat = mist.material;
+      if (mat instanceof THREE.MeshBasicMaterial) {
+        mat.opacity = (isNight ? 0.2 : 0.16) + Math.sin(t * 0.9 + index) * 0.05;
+      }
+    });
+
+    glowRefs.current.forEach((glow, index) => {
+      if (!glow) return;
+      glow.position.y += Math.sin(t * 0.8 + index * 2) * delta * 0.08;
+      const mat = glow.material;
+      if (mat instanceof THREE.MeshBasicMaterial) {
+        mat.opacity = (isNight ? 0.8 : 0.45) + Math.sin(t * 3.2 + index) * 0.2;
+      }
+    });
+  });
+
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.54, 0]}>
+        <circleGeometry args={[24, 96]} />
+        <meshStandardMaterial color={isNight ? '#071419' : '#263526'} roughness={0.98} metalness={0.04} />
+      </mesh>
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.51, -0.6]}>
+        <circleGeometry args={[8.6, 96]} />
+        <meshStandardMaterial
+          color={isNight ? '#0c2f3a' : '#3b8792'}
+          roughness={0.24}
+          metalness={0.18}
+          transparent
+          opacity={0.72}
+        />
+      </mesh>
+
+      {SHANHAI_MOUNTAINS.map((mountain, index) => (
+        <group key={`shanhai-mountain-${index}`} position={mountain.position} scale={mountain.scale}>
+          <mesh>
+            <coneGeometry args={[1.25, 2.6, 7]} />
+            <meshStandardMaterial
+              color={isNight ? mountain.colorNight : mountain.colorDay}
+              roughness={0.88}
+              metalness={0.04}
+            />
+          </mesh>
+          <mesh position={[0, 1.1, 0]}>
+            <dodecahedronGeometry args={[0.42, 0]} />
+            <meshStandardMaterial color={isNight ? '#2a4152' : '#7f9b7f'} roughness={0.9} metalness={0.05} />
+          </mesh>
+        </group>
+      ))}
+
+      {SHANHAI_FLOATING_ISLANDS.map((island, index) => (
+        <group key={`shanhai-island-${index}`} position={island.position} rotation={island.rotation}>
+          <mesh>
+            <dodecahedronGeometry args={[0.55, 0]} />
+            <meshStandardMaterial color={isNight ? '#14202d' : '#3f4f3f'} roughness={0.86} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, -0.24, 0]}>
+            <coneGeometry args={[0.22, 0.54, 6]} />
+            <meshStandardMaterial color={isNight ? '#0f172a' : '#475569'} roughness={0.8} metalness={0.12} />
+          </mesh>
+        </group>
+      ))}
+
+      <group position={[5.7, -0.47, -6.4]}>
+        <mesh position={[0, 0.64, 0]}>
+          <cylinderGeometry args={[0.14, 0.2, 1.28, 12]} />
+          <meshStandardMaterial color="#5b4632" roughness={0.92} metalness={0.02} />
+        </mesh>
+        <mesh position={[0, 1.3, 0]}>
+          <sphereGeometry args={[0.46, 20, 20]} />
+          <meshStandardMaterial color={isNight ? '#3f6a5f' : '#6f9f7d'} roughness={0.85} metalness={0.04} />
+        </mesh>
+        {[-0.26, 0.22].map((offset, index) => (
+          <mesh key={`tree-branch-${index}`} position={[offset, 1.02, 0]} rotation={[0, 0, offset > 0 ? -0.55 : 0.55]}>
+            <capsuleGeometry args={[0.05, 0.48, 4, 8]} />
+            <meshStandardMaterial color="#6b523d" roughness={0.9} metalness={0.03} />
+          </mesh>
+        ))}
+      </group>
+
+      <group position={[-5.8, -0.5, -5.6]}>
+        <mesh>
+          <cylinderGeometry args={[0.19, 0.24, 1.1, 16]} />
+          <meshStandardMaterial color="#6b7280" roughness={0.86} metalness={0.08} />
+        </mesh>
+        <mesh position={[0, 0.58, 0]}>
+          <torusGeometry args={[0.26, 0.05, 12, 24]} />
+          <meshStandardMaterial color="#9ca3af" roughness={0.68} metalness={0.22} />
+        </mesh>
+      </group>
+
+      {[
+        [-4.5, 0.3, -5.5],
+        [-1.7, 0.35, -7.2],
+        [1.6, 0.33, -6.8],
+        [4.2, 0.3, -5.9],
+      ].map((position, index) => (
+        <mesh key={`mist-${index}`} ref={(node) => { mistRefs.current[index] = node; }} position={position as [number, number, number]}>
+          <sphereGeometry args={[index % 2 === 0 ? 1.1 : 0.9, 24, 24]} />
+          <meshBasicMaterial color={isNight ? '#bfdbfe' : '#ecfeff'} transparent opacity={isNight ? 0.2 : 0.16} />
+        </mesh>
+      ))}
+
+      {(isNight ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]).map((index) => {
+        const x = -3 + index * 1.2;
+        const z = -4.2 - (index % 2) * 1.1;
+        const y = 0.55 + (index % 3) * 0.2;
+        return (
+          <mesh key={`glow-${index}`} ref={(node) => { glowRefs.current[index] = node; }} position={[x, y, z]}>
+            <sphereGeometry args={[0.05, 10, 10]} />
+            <meshBasicMaterial color={isNight ? '#fde68a' : '#bae6fd'} transparent opacity={isNight ? 0.8 : 0.45} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+};
+
 const EnvironmentManager: React.FC<{ theme: AppTheme; sky: SkyState }> = ({ theme, sky }) => {
   const themedLayer = (() => {
     switch (theme) {
       case AppTheme.CLASSIC:
         return (
           <>
+            <hemisphereLight args={['#fff7ed', '#1f2937', 0.5]} />
             <ContactShadows resolution={1024} scale={50} blur={2} opacity={0.35} far={10} color="#000" />
-            <Grid infiniteGrid cellSize={0.5} sectionSize={2} sectionColor="#9aa5b1" cellColor="#d3dbe2" fadeDistance={30} position={[0, -0.5, 0]} />
           </>
         );
       case AppTheme.RENAISSANCE:
@@ -842,22 +1219,7 @@ const EnvironmentManager: React.FC<{ theme: AppTheme; sky: SkyState }> = ({ them
           <>
             <Environment preset="city" background={false} blur={0.6} />
             <directionalLight position={[-5, 5, 5]} intensity={1.4} castShadow />
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-              <planeGeometry args={[50, 50]} />
-              <MeshReflectorMaterial
-                blur={[300, 100]}
-                resolution={2048}
-                mixBlur={1}
-                mixStrength={60}
-                roughness={0.5}
-                depthScale={1.2}
-                minDepthThreshold={0.4}
-                maxDepthThreshold={1.4}
-                color="#202020"
-                metalness={0.5}
-                mirror={1}
-              />
-            </mesh>
+            <ContactShadows resolution={1024} scale={24} blur={2.5} opacity={0.45} far={10} color="#000" />
           </>
         );
       case AppTheme.OIL_PAINTING:
@@ -878,7 +1240,6 @@ const EnvironmentManager: React.FC<{ theme: AppTheme; sky: SkyState }> = ({ them
           <>
             <pointLight position={[10, 15, 10]} intensity={1.2} color="#38bdf8" />
             <spotLight position={[-5, 12, 5]} intensity={2.1} angle={0.3} penumbra={1} color="#38bdf8" castShadow />
-            <Grid infiniteGrid cellSize={1} sectionSize={4} sectionColor="#1e293b" cellColor="#020205" fadeDistance={25} position={[0, -0.5, 0]} />
             <ContactShadows resolution={1024} scale={20} blur={2.5} opacity={0.6} far={10} color="#000" />
           </>
         );
@@ -888,6 +1249,7 @@ const EnvironmentManager: React.FC<{ theme: AppTheme; sky: SkyState }> = ({ them
   return (
     <>
       <TimeSky sky={sky} />
+      <ShanhaiRealm sky={sky} />
       {themedLayer}
     </>
   );
