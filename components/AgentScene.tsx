@@ -29,12 +29,12 @@ const easeOutCubic = (t: number): number => {
     return 1 - Math.pow(1 - t, 3);
 };
 
-const AGENT_FUNCTION_LABEL: Record<string, string> = {
-  'AGT-001': 'TASK EXECUTION LEAD',
-  'AGT-002': 'EDGE CASE SPECIALIST',
-  'AGT-003': 'DOCS & COMMUNICATION',
-  'AGT-004': 'INCIDENT RESPONSE',
-  'AGT-005': 'RESEARCH & ARCHITECTURE',
+const AGENT_FUNCTION_SCRIPT: Record<string, string[]> = {
+  'AGT-001': ['EXECUTE TASKS', 'PLAN -> PATCH -> VERIFY', 'SHIP WITH CONFIDENCE'],
+  'AGT-002': ['PROBE EDGE CASES', 'BREAK INPUT BOUNDARIES', 'HARDEN FAILURE PATHS'],
+  'AGT-003': ['GO THROUGH ALL FILES', 'SUMMARIZE CHANGE STORY', 'WRITE CLEAR DOC NOTES'],
+  'AGT-004': ['DETECT INCIDENT SIGNALS', 'CONTAIN / MITIGATE / RECOVER', 'RESTORE SERVICE FAST'],
+  'AGT-005': ['MAP ARCHITECTURE PATTERNS', 'EXPLORE DEEP OPTIONS', 'DESIGN FUTURE SYSTEMS'],
 };
 
 // Holographic beam during spawn
@@ -104,6 +104,52 @@ const CameraFocusTracker: React.FC<{
   return null;
 };
 
+const ReflectionFunctionDisplay: React.FC<{
+  active: boolean;
+  scripts: string[];
+}> = ({ active, scripts }) => {
+  const [tick, setTick] = useState(0);
+  const safeScripts = scripts.length > 0 ? scripts : ['CORE FUNCTION'];
+
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => setTick((prev) => prev + 1), 90);
+    return () => clearInterval(timer);
+  }, [active]);
+
+  const cycleLength = 80;
+  const phraseIndex = active ? Math.floor(tick / cycleLength) % safeScripts.length : 0;
+  const phrase = safeScripts[phraseIndex];
+  const phase = active ? tick % cycleLength : 0;
+
+  let charCount = phrase.length;
+  if (active) {
+    if (phase < 30) charCount = Math.max(1, Math.ceil((phase / 30) * phrase.length));
+    else if (phase < 50) charCount = phrase.length;
+    else if (phase < 70) charCount = Math.max(1, phrase.length - Math.ceil(((phase - 50) / 20) * phrase.length));
+    else charCount = 1;
+  }
+
+  const text = phrase.slice(0, charCount);
+  const scanGlow = active && phase >= 30 && phase <= 52;
+
+  return (
+    <div
+      className={`relative px-2 py-1 rounded-full border text-[8px] font-black tracking-wider uppercase whitespace-nowrap transition-all ${
+        active
+          ? 'bg-cyan-400/20 border-cyan-300/70 text-cyan-100'
+          : 'bg-slate-900/25 border-white/15 text-white/45'
+      }`}
+    >
+      {text}
+      <span className={`${active ? 'inline-block' : 'hidden'} ml-1 ${tick % 2 === 0 ? 'opacity-100' : 'opacity-30'}`}>|</span>
+      {scanGlow && (
+        <span className="absolute left-0 top-0 h-full w-full rounded-full bg-cyan-300/10" />
+      )}
+    </div>
+  );
+};
+
 interface AgentProps {
   name: string;
   role: string;
@@ -120,7 +166,7 @@ interface AgentProps {
   idleRole?: 'corner' | 'pair' | 'cards' | 'pond' | 'lying' | 'sneak';
   lookTarget?: [number, number, number];
   reflectionActive?: boolean;
-  functionLabel?: string;
+  functionScripts?: string[];
 }
 
 const CustomTextureFace: React.FC<{ url: string }> = ({ url }) => {
@@ -149,7 +195,7 @@ const AgentAvatar: React.FC<AgentProps> = ({
   idleRole,
   lookTarget,
   reflectionActive = false,
-  functionLabel,
+  functionScripts = [],
 }) => {
   const group = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Mesh>(null);
@@ -521,15 +567,9 @@ const AgentAvatar: React.FC<AgentProps> = ({
               <meshBasicMaterial color="#22d3ee" transparent opacity={0.08} side={THREE.DoubleSide} />
             </mesh>
           </group>
-          {functionLabel && (
+          {functionScripts.length > 0 && (
             <Html position={[0, -0.44, 0]} center distanceFactor={7.2} pointerEvents="none">
-              <div className={`px-2 py-1 rounded-full border text-[8px] font-black tracking-wider uppercase whitespace-nowrap transition-all ${
-                reflectionActive
-                  ? 'bg-cyan-400/20 border-cyan-300/70 text-cyan-100'
-                  : 'bg-slate-900/25 border-white/15 text-white/45'
-              }`}>
-                {functionLabel}
-              </div>
+              <ReflectionFunctionDisplay active={reflectionActive} scripts={functionScripts} />
             </Html>
           )}
 
@@ -947,7 +987,7 @@ const AgentScene: React.FC<SceneProps> = ({
                     idleRole={idleConfig?.role}
                     lookTarget={idleConfig?.lookTarget}
                     reflectionActive={isFocused || (isProcessing && activeAgentId === profile.id)}
-                    functionLabel={AGENT_FUNCTION_LABEL[profile.id]}
+                    functionScripts={AGENT_FUNCTION_SCRIPT[profile.id]}
                   />
                 );
               })}
