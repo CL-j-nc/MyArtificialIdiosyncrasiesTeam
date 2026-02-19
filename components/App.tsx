@@ -44,7 +44,7 @@ const App: React.FC = () => {
   const [apiStatus, setApiStatus] = useState<'ONLINE' | 'OFFLINE' | 'CONNECTING'>('CONNECTING');
   
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [rightPanelOpen] = useState(true);
 
   // Bot Profile Management
   const [bots, setBots] = useState<BotProfile[]>([]);
@@ -168,7 +168,7 @@ const App: React.FC = () => {
     activeBotTriggerRef.current = fromTelegram ? fromTelegram.botId : null;
 
     setState(prev => ({ ...prev, isRunning: true, currentStage: type, logs: [], result: null }));
-    setActiveModel(ModelProvider.GEMINI);
+    setActiveModel(ModelProvider.OLLAMA);
 
     try {
       let result = '';

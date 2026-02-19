@@ -35,7 +35,6 @@ const TelegramWidget: React.FC<TelegramWidgetProps> = ({
   const textMain = isLightTheme ? 'text-black/80' : 'text-white/80';
   const textDim = isLightTheme ? 'text-black/40' : 'text-white/40';
   const borderClass = isLightTheme ? 'border-black/5' : 'border-white/5';
-  const hoverClass = isLightTheme ? 'hover:bg-black/5' : 'hover:bg-white/5';
 
   // Set active bot initially
   useEffect(() => {

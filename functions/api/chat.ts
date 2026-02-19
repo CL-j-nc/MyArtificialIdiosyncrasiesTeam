@@ -1,6 +1,14 @@
 interface Env {
-  GEMINI_API_KEY: string;
+  OLLAMA_BASE_URL?: string;
+  OLLAMA_MODEL?: string;
 }
+
+type PagesContext<E> = {
+  request: Request;
+  env: E;
+};
+
+type PagesFunction<E = unknown> = (context: PagesContext<E>) => Response | Promise<Response>;
 
 interface Message {
   role: 'user' | 'assistant';
@@ -73,48 +81,45 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
-async function callGemini(
+const getOllamaBaseUrl = (env: Env): string =>
+  (env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '');
+
+const getOllamaModel = (env: Env): string =>
+  env.OLLAMA_MODEL || 'qwen2.5:7b-instruct';
+
+async function callOllama(
   systemPrompt: string,
   messages: Message[],
-  apiKey: string,
+  env: Env,
 ): Promise<string> {
-  const contents = messages.map((m) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
-
   const payload = {
-    systemInstruction: { parts: [{ text: systemPrompt }] },
-    contents,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 1024,
-    },
+    model: getOllamaModel(env),
+    stream: false,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages,
+    ],
   };
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-  );
+  const resp = await fetch(`${getOllamaBaseUrl(env)}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 
   if (!resp.ok) {
     const err = await resp.text();
-    throw new Error(`Gemini API error (${resp.status}): ${err}`);
+    throw new Error(`Ollama API error (${resp.status}): ${err}`);
   }
 
-  const data = (await resp.json()) as any;
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('No response from Gemini');
+  const data = (await resp.json()) as { message?: { content?: string } };
+  const text = data.message?.content;
+  if (!text) throw new Error('No response from Ollama');
   return text;
 }
 
-export const onRequestOptions: PagesFunction = () => {
-  return new Response(null, { status: 204, headers: corsHeaders() });
-};
+export const onRequestOptions: PagesFunction = () =>
+  new Response(null, { status: 204, headers: corsHeaders() });
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
@@ -130,11 +135,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const persona = AGENT_PERSONAS[agentId];
-    const reply = await callGemini(
-      persona.systemPrompt,
-      messages,
-      context.env.GEMINI_API_KEY,
-    );
+    const reply = await callOllama(persona.systemPrompt, messages, context.env);
 
     return jsonResponse({ reply, agentId });
   } catch (e) {

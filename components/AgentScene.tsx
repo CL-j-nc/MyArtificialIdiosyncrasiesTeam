@@ -42,7 +42,7 @@ const SpawnBeam: React.FC<{ active: boolean, color: string }> = ({ active, color
     }
   }, [active]);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (mesh.current && visible) {
       mesh.current.scale.x = THREE.MathUtils.lerp(mesh.current.scale.x, 0, 0.05);
       mesh.current.scale.z = THREE.MathUtils.lerp(mesh.current.scale.z, 0, 0.05);

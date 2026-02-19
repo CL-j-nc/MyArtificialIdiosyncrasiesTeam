@@ -194,7 +194,7 @@ const App: React.FC = () => {
     activeBotTriggerRef.current = fromTelegram ? fromTelegram.botId : null; // Added this to track bot ID context
 
     setState(prev => ({ ...prev, isRunning: true, currentStage: type, logs: [], result: null }));
-    setActiveModel(ModelProvider.GEMINI);
+    setActiveModel(ModelProvider.OLLAMA);
 
     try {
       let result = '';

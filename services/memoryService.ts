@@ -1,6 +1,5 @@
-
-import { GoogleGenAI } from "@google/genai";
 import { MemoryStore, UserPersona, Interaction } from "../types";
+import { ollamaChatJson } from "./ollamaClient";
 
 const STORAGE_KEY = 'core_orchestrator_memory_v4.0_cn';
 
@@ -8,7 +7,7 @@ const DEFAULT_PERSONA: UserPersona = {
   languageStyle: "精确、注重代理能动性、年轻化的数字精神。请始终使用中文回复。",
   codingPreferences: ["TypeScript", "React", "Rust", "TailwindCSS"],
   industryContext: "通用人工智能与系统编排",
-  knownTools: ["git", "docker", "npm", "telegram-api", "gemini-api"],
+  knownTools: ["git", "docker", "npm", "telegram-api", "ollama-api"],
   longTermGoals: ["统一智能", "自主问题解决", "系统弹性"]
 };
 
@@ -24,22 +23,24 @@ const DEFAULT_MEMORY: MemoryStore = {
   history: []
 };
 
+interface MemoryAnalysis {
+  newFacts?: string[];
+  personaUpdates?: {
+    industryContext?: string;
+  };
+}
+
 export class MemoryService {
   private static instance: MemoryService;
   private memory: MemoryStore;
-  private ai: GoogleGenAI;
 
-  private constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
+  private constructor() {
     this.memory = this.loadMemory();
   }
 
-  public static getInstance(apiKey?: string): MemoryService {
+  public static getInstance(): MemoryService {
     if (!MemoryService.instance) {
-      if (!apiKey) {
-        apiKey = process.env.API_KEY || "";
-      }
-      MemoryService.instance = new MemoryService(apiKey);
+      MemoryService.instance = new MemoryService();
     }
     return MemoryService.instance;
   }
@@ -72,7 +73,6 @@ export class MemoryService {
 
   public compileSystemPrompt(): string {
     const p = this.memory.persona;
-    // Get last 10 interactions for deeper context
     const historySummary = this.memory.history
       .slice(-10)
       .map(h => `[${h.timestamp}] 工作流: ${h.workflow} | 输入: ${h.input.slice(0, 50)}... | 输出: ${h.output.slice(0, 150)}...`)
@@ -107,42 +107,53 @@ ${historySummary || "账本目前为空。请初始化第一个任务。"}
   public async consolidateMemory(userPrompt: string, aiResponse: string, workflowName: string = "Manual", addLog?: any): Promise<void> {
     try {
       this.memory.interactionCount++;
-      
+
       const interaction: Interaction = {
         timestamp: new Date().toLocaleTimeString(),
         workflow: workflowName,
         input: userPrompt,
         output: aiResponse
       };
-      
+
       this.memory.history.push(interaction);
       if (this.memory.history.length > 50) this.memory.history.shift();
 
-      // Extract new facts using Gemini
       const analysisPrompt = `
-        分析此交互:
-        工作流: "${workflowName}"
-        用户输入: "${userPrompt.slice(0, 500)}"
-        AI 响应: "${aiResponse.slice(0, 800)}"
-        
-        提取 1-3 个新建立的关键事实或系统状态。
-        如果焦点已转移，请更新 industryContext。
-        仅返回有效的 JSON: {"newFacts": ["string"], "personaUpdates": {"industryContext": "string"}}
-      `;
+分析此交互:
+工作流: "${workflowName}"
+用户输入: "${userPrompt.slice(0, 500)}"
+AI 响应: "${aiResponse.slice(0, 800)}"
 
-      const result = await this.ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: analysisPrompt,
-        config: { responseMimeType: "application/json" }
-      });
+提取 1-3 个新建立的关键事实或系统状态。
+如果焦点已转移，请更新 industryContext。
+仅返回有效 JSON:
+{"newFacts": ["string"], "personaUpdates": {"industryContext": "string"}}
+      `.trim();
 
-      const data = JSON.parse(result.text || "{}");
+      const data = await ollamaChatJson<MemoryAnalysis>([
+        {
+          role: 'system',
+          content: '你是一个严格 JSON 输出器。只能输出 JSON，不能输出额外文本。',
+        },
+        {
+          role: 'user',
+          content: analysisPrompt,
+        },
+      ], { temperature: 0.2, numCtx: 8192 });
 
-      if (data.newFacts && Array.isArray(data.newFacts)) {
-        data.newFacts.forEach((f: string) => {
-          if (!this.memory.learnedFacts.includes(f) && f.length > 5) {
-            this.memory.learnedFacts.push(f);
-            if (addLog) addLog({ id: crypto.randomUUID(), timestamp: new Date().toLocaleTimeString(), source: 'System', message: `知识已同步: ${f}`, type: 'success' });
+      if (Array.isArray(data.newFacts)) {
+        data.newFacts.forEach((fact: string) => {
+          if (!this.memory.learnedFacts.includes(fact) && fact.length > 5) {
+            this.memory.learnedFacts.push(fact);
+            if (addLog) {
+              addLog({
+                id: crypto.randomUUID(),
+                timestamp: new Date().toLocaleTimeString(),
+                source: 'System',
+                message: `知识已同步: ${fact}`,
+                type: 'success'
+              });
+            }
           }
         });
       }
