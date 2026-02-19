@@ -36,45 +36,34 @@ const AGENT_FUNCTION_SCRIPT: Record<string, string[]> = {
   'AGT-005': ['MAP ARCHITECTURE PATTERNS', 'EXPLORE DEEP OPTIONS', 'DESIGN FUTURE SYSTEMS'],
 };
 
-const LEAD_BRAIN_LOBES: Array<{ position: [number, number, number]; radius: number }> = [
-  { position: [-0.18, 0.86, 0.04], radius: 0.082 },
-  { position: [-0.14, 0.78, 0.14], radius: 0.076 },
-  { position: [-0.15, 0.72, -0.08], radius: 0.074 },
-  { position: [-0.09, 0.9, -0.02], radius: 0.07 },
-  { position: [0.18, 0.86, 0.04], radius: 0.082 },
-  { position: [0.14, 0.78, 0.14], radius: 0.076 },
-  { position: [0.15, 0.72, -0.08], radius: 0.074 },
-  { position: [0.09, 0.9, -0.02], radius: 0.07 },
-];
-
 const LEAD_BRAIN_GYRI_PATHS: [number, number, number][][] = [
   [
-    [-0.24, 0.85, 0.08],
-    [-0.2, 0.9, 0.14],
-    [-0.14, 0.87, 0.1],
-    [-0.1, 0.91, 0.15],
-    [-0.06, 0.86, 0.08],
+    [-0.22, 0.87, 0.04],
+    [-0.19, 0.92, 0.11],
+    [-0.14, 0.89, 0.07],
+    [-0.1, 0.93, 0.12],
+    [-0.05, 0.89, 0.06],
   ],
   [
-    [-0.24, 0.78, -0.01],
-    [-0.19, 0.83, 0.05],
-    [-0.13, 0.8, 0.01],
-    [-0.08, 0.84, 0.06],
-    [-0.05, 0.79, 0.01],
+    [-0.23, 0.82, -0.03],
+    [-0.18, 0.86, 0.04],
+    [-0.13, 0.84, -0.01],
+    [-0.09, 0.88, 0.05],
+    [-0.04, 0.83, -0.02],
   ],
   [
-    [-0.23, 0.72, -0.1],
-    [-0.18, 0.76, -0.02],
-    [-0.12, 0.73, -0.08],
-    [-0.08, 0.77, -0.01],
-    [-0.04, 0.72, -0.06],
+    [-0.22, 0.75, -0.12],
+    [-0.17, 0.79, -0.03],
+    [-0.12, 0.76, -0.09],
+    [-0.07, 0.8, -0.02],
+    [-0.03, 0.75, -0.07],
   ],
   [
-    [-0.2, 0.68, 0.12],
-    [-0.15, 0.73, 0.19],
-    [-0.1, 0.7, 0.13],
-    [-0.06, 0.74, 0.19],
-    [-0.03, 0.69, 0.12],
+    [-0.2, 0.7, 0.1],
+    [-0.15, 0.74, 0.17],
+    [-0.1, 0.72, 0.11],
+    [-0.06, 0.76, 0.16],
+    [-0.02, 0.71, 0.09],
   ],
 ];
 
@@ -107,32 +96,143 @@ const LEAD_CURRENT_RINGS: Array<{
   rotation: [number, number, number];
   args: [number, number, number, number, number];
 }> = [
-  { position: [0, 0.79, 0.02], rotation: [Math.PI / 2, 0, 0], args: [0.16, 0.008, 8, 64, Math.PI * 1.5] },
-  { position: [0, 0.79, 0.02], rotation: [Math.PI / 3, Math.PI / 4, 0.3], args: [0.13, 0.007, 8, 64, Math.PI * 1.45] },
-  { position: [0, 0.79, 0.02], rotation: [Math.PI / 4, -Math.PI / 3, 0.9], args: [0.11, 0.0065, 8, 64, Math.PI * 1.38] },
+  { position: [0, 0.79, 0.02], rotation: [Math.PI / 2, 0, 0], args: [0.12, 0.0065, 8, 64, Math.PI * 1.5] },
+  { position: [0, 0.79, 0.02], rotation: [Math.PI / 3, Math.PI / 4, 0.3], args: [0.1, 0.006, 8, 64, Math.PI * 1.45] },
+  { position: [0, 0.79, 0.02], rotation: [Math.PI / 4, -Math.PI / 3, 0.9], args: [0.085, 0.0055, 8, 64, Math.PI * 1.38] },
 ];
 
 const LEAD_CURRENT_PATHS: [number, number, number][][] = [
   [
-    [-0.2, 0.75, -0.05],
-    [-0.11, 0.85, 0.07],
-    [0.02, 0.79, -0.02],
-    [0.14, 0.88, 0.06],
-    [0.2, 0.74, -0.04],
+    [-0.12, 0.76, -0.03],
+    [-0.06, 0.84, 0.03],
+    [0.01, 0.8, -0.01],
+    [0.08, 0.86, 0.03],
+    [0.12, 0.77, -0.02],
   ],
   [
-    [-0.16, 0.67, 0.08],
-    [-0.05, 0.76, 0.14],
-    [0.08, 0.72, 0.02],
-    [0.18, 0.81, 0.09],
+    [-0.1, 0.71, 0.04],
+    [-0.03, 0.77, 0.09],
+    [0.05, 0.74, 0.02],
+    [0.1, 0.8, 0.05],
   ],
   [
-    [-0.18, 0.84, -0.12],
-    [-0.08, 0.92, -0.03],
-    [0.03, 0.86, -0.09],
-    [0.15, 0.93, -0.01],
+    [-0.11, 0.83, -0.07],
+    [-0.05, 0.9, -0.02],
+    [0.02, 0.85, -0.05],
+    [0.09, 0.9, -0.01],
   ],
 ];
+
+const createLeadBrainGeometry = (): THREE.BufferGeometry => {
+  const geometry = new THREE.SphereGeometry(0.235, 84, 84);
+  const position = geometry.attributes.position as THREE.BufferAttribute;
+  const vertex = new THREE.Vector3();
+
+  for (let i = 0; i < position.count; i += 1) {
+    vertex.fromBufferAttribute(position, i);
+    const normal = vertex.clone().normalize();
+    const theta = Math.atan2(normal.z, normal.x);
+    const phi = Math.acos(THREE.MathUtils.clamp(normal.y, -1, 1));
+
+    const foldPrimary = Math.sin(theta * 7.1 + Math.sin(phi * 3.6) * 1.35) * 0.022;
+    const foldSecondary = Math.sin(phi * 10.8 + theta * 1.9) * 0.013;
+    const foldTertiary = Math.cos(theta * 13.2 - phi * 2.1) * 0.008;
+
+    const frontalBulge = Math.exp(-Math.pow(normal.z - 0.25, 2) / 0.2) * 0.011;
+    const occipitalBulge = Math.exp(-Math.pow(normal.z + 0.52, 2) / 0.24) * 0.01;
+    const topBias = Math.max(0, normal.y) * 0.008;
+
+    // Median longitudinal fissure (deep central groove).
+    const fissureMask = Math.exp(-Math.pow(normal.x / 0.16, 2)) * (0.62 + Math.max(0, normal.y) * 0.75);
+    const fissureDepth = fissureMask * 0.048;
+
+    const radialScale = 1 + foldPrimary + foldSecondary + foldTertiary + frontalBulge + occipitalBulge + topBias - fissureDepth;
+    vertex.multiplyScalar(radialScale);
+
+    // Brain proportions (wider, slightly flatter vertically, fuller front/back).
+    vertex.x *= 1.22;
+    vertex.y *= normal.y < -0.14 ? 0.74 : 0.88;
+    vertex.z *= 1.08;
+
+    position.setXYZ(i, vertex.x, vertex.y, vertex.z);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  return geometry;
+};
+
+type OilArtStyle = 'postmodernism' | 'expressionism' | 'eclecticism' | 'structuralism' | 'geometricism';
+
+const AGENT_OIL_STYLE: Record<string, OilArtStyle> = {
+  'AGT-001': 'expressionism',
+  'AGT-002': 'postmodernism',
+  'AGT-003': 'eclecticism',
+  'AGT-004': 'structuralism',
+  'AGT-005': 'geometricism',
+};
+
+const OIL_STYLE_PALETTES: Record<OilArtStyle, string[]> = {
+  postmodernism: ['#0ea5e9', '#f43f5e', '#fde047', '#111827', '#f8fafc'],
+  expressionism: ['#dc2626', '#f97316', '#facc15', '#312e81', '#1f2937'],
+  eclecticism: ['#14b8a6', '#a855f7', '#f59e0b', '#e11d48', '#0f172a'],
+  structuralism: ['#334155', '#0f766e', '#22d3ee', '#94a3b8', '#111827'],
+  geometricism: ['#2563eb', '#8b5cf6', '#f59e0b', '#10b981', '#0f172a'],
+};
+
+const OIL_STYLE_CONFIG: Record<OilArtStyle, { roughness: number; metalness: number; brushCount: number; distort: number }> = {
+  postmodernism: { roughness: 0.74, metalness: 0.08, brushCount: 180, distort: 0.16 },
+  expressionism: { roughness: 0.86, metalness: 0.04, brushCount: 220, distort: 0.28 },
+  eclecticism: { roughness: 0.8, metalness: 0.06, brushCount: 200, distort: 0.21 },
+  structuralism: { roughness: 0.7, metalness: 0.14, brushCount: 170, distort: 0.12 },
+  geometricism: { roughness: 0.66, metalness: 0.2, brushCount: 150, distort: 0.1 },
+};
+
+const createOilBrushTexture = (style: OilArtStyle, accentColor: string): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    const fallback = new THREE.CanvasTexture(canvas);
+    fallback.needsUpdate = true;
+    return fallback;
+  }
+
+  const palette = OIL_STYLE_PALETTES[style];
+  const config = OIL_STYLE_CONFIG[style];
+  const [baseA, baseB, baseC] = palette;
+  const gradient = ctx.createLinearGradient(0, 0, 256, 256);
+  gradient.addColorStop(0, baseA);
+  gradient.addColorStop(0.5, baseB);
+  gradient.addColorStop(1, baseC);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 256, 256);
+
+  const strokePalette = [...palette, accentColor, '#ffffff'];
+  for (let i = 0; i < config.brushCount; i += 1) {
+    const brushColor = strokePalette[Math.floor(Math.random() * strokePalette.length)];
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const w = 14 + Math.random() * 56;
+    const h = 4 + Math.random() * 16;
+    const angle = Math.random() * Math.PI * 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.globalAlpha = 0.08 + Math.random() * 0.22;
+    ctx.fillStyle = brushColor;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.4, 1.4);
+  texture.needsUpdate = true;
+  return texture;
+};
 
 // Holographic beam during spawn
 const SpawnBeam: React.FC<{ active: boolean, color: string }> = ({ active, color }) => {
@@ -345,6 +445,10 @@ const AgentAvatar: React.FC<AgentProps> = ({
     [lookTarget]
   );
   const isLeadAgent = style.id === 'AGT-001';
+  const artStyle = AGENT_OIL_STYLE[style.id] || 'eclecticism';
+  const artConfig = OIL_STYLE_CONFIG[artStyle];
+  const oilTexture = useMemo(() => createOilBrushTexture(artStyle, style.color), [artStyle, style.color]);
+  const leadBrainGeometry = useMemo(() => createLeadBrainGeometry(), []);
   const leadCurrentCurves = useMemo(
     () =>
       LEAD_CURRENT_PATHS.map((path) =>
@@ -370,6 +474,13 @@ const AgentAvatar: React.FC<AgentProps> = ({
     );
     return [...left, ...right];
   }, []);
+
+  useEffect(() => {
+    return () => {
+      oilTexture.dispose();
+      leadBrainGeometry.dispose();
+    };
+  }, [leadBrainGeometry, oilTexture]);
 
   useEffect(() => {
     if (group.current) {
@@ -517,12 +628,12 @@ const AgentAvatar: React.FC<AgentProps> = ({
 
     if (leftArmRef.current && rightArmRef.current && spawned) {
         if (isLeadAgent) {
-            leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.92, 0.12);
-            rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.92, 0.12);
-            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -0.42, 0.12);
-            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, -0.42, 0.12);
-            leftArmRef.current.rotation.y = THREE.MathUtils.lerp(leftArmRef.current.rotation.y, -0.2, 0.12);
-            rightArmRef.current.rotation.y = THREE.MathUtils.lerp(rightArmRef.current.rotation.y, 0.2, 0.12);
+            leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.42, 0.12);
+            rightArmRef.current.rotation.z = THREE.MathUtils.lerp(rightArmRef.current.rotation.z, 0.42, 0.12);
+            leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -0.12, 0.12);
+            rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, -0.12, 0.12);
+            leftArmRef.current.rotation.y = THREE.MathUtils.lerp(leftArmRef.current.rotation.y, -0.24, 0.12);
+            rightArmRef.current.rotation.y = THREE.MathUtils.lerp(rightArmRef.current.rotation.y, 0.24, 0.12);
         } else if (idlePose && idleRole === 'cards') {
             leftArmRef.current.rotation.z = THREE.MathUtils.lerp(leftArmRef.current.rotation.z, -0.65, 0.12);
             leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, -0.3, 0.12);
@@ -627,6 +738,11 @@ const AgentAvatar: React.FC<AgentProps> = ({
   });
 
   const renderHeadGeometry = () => {
+      if (!isLeadAgent) {
+        if (artStyle === 'geometricism') return <dodecahedronGeometry args={[0.35]} />;
+        if (artStyle === 'structuralism') return <boxGeometry args={[0.5, 0.46, 0.44]} />;
+        if (artStyle === 'expressionism') return <sphereGeometry args={[0.3, 28, 28]} />;
+      }
       switch(style.shape) {
           case 'box': return <boxGeometry args={[0.5, 0.5, 0.5]} />;
           case 'octahedron': return <octahedronGeometry args={[0.32]} />;
@@ -636,23 +752,19 @@ const AgentAvatar: React.FC<AgentProps> = ({
       }
   };
 
-  // Determine material properties based on theme
-  const getMaterialProps = () => {
-    switch (theme) {
-        case AppTheme.REALISTIC: return { metalness: 0.9, roughness: 0.1, envMapIntensity: 1 };
-        case AppTheme.OIL_PAINTING: return { metalness: 0.0, roughness: 1.0, envMapIntensity: 0.2, flatShading: true };
-        case AppTheme.CLASSIC: return { metalness: 0.1, roughness: 0.5 };
-        case AppTheme.RENAISSANCE: return { metalness: 0.8, roughness: 0.3, envMapIntensity: 1.5 };
-        default: return { metalness: 0.8, roughness: 0.1 };
-    }
-  };
-
-  const matProps = getMaterialProps();
   const isHumanFace = style.faceType === 'human';
   const skinTone = style.skinTone || '#f1c7a8';
   const hairColor = style.hairColor || '#312e81';
   const baseColor = theme === AppTheme.CLASSIC ? '#444' : style.color;
   const headColor = isGlitched ? '#ff2222' : (isHumanFace ? skinTone : baseColor);
+  const nonLeadHeadScale: [number, number, number] =
+    artStyle === 'expressionism'
+      ? [1.02, 1.14, 0.94]
+      : artStyle === 'structuralism'
+        ? [1.06, 1, 0.9]
+        : artStyle === 'geometricism'
+          ? [1.08, 1.08, 1.08]
+          : [1, 1, 1];
 
   return (
     <group ref={group} onClick={(e) => { e.stopPropagation(); onClick(); }} scale={0}>
@@ -663,68 +775,57 @@ const AgentAvatar: React.FC<AgentProps> = ({
           {isLeadAgent ? (
             <>
               <group ref={leadHeadGroupRef}>
-                <mesh ref={headRef} position={[0, 0.79, 0.02]} scale={[0.95, 0.82, 1.02]}>
-                  <sphereGeometry args={[0.2, 44, 44]} />
+                <mesh ref={headRef} position={[0, 0.79, 0.02]} geometry={leadBrainGeometry}>
                   <meshStandardMaterial
-                    color={isGlitched ? '#fb7185' : '#f472b6'}
-                    metalness={0.12}
-                    roughness={0.34}
-                    emissive={isGlitched ? '#e11d48' : '#db2777'}
-                    emissiveIntensity={0.6}
+                    map={oilTexture}
+                    color={isGlitched ? '#b91c1c' : '#0f172a'}
+                    metalness={0.18}
+                    roughness={0.58}
+                    emissive={isGlitched ? '#ef4444' : '#1d4b77'}
+                    emissiveIntensity={0.22}
                   />
                 </mesh>
-                <mesh position={[-0.115, 0.79, 0.03]} scale={[1, 0.94, 1.08]}>
-                  <sphereGeometry args={[0.22, 44, 44]} />
+                <mesh position={[0, 0.86, 0.06]} scale={[0.44, 0.63, 0.42]}>
+                  <sphereGeometry args={[0.22, 36, 36]} />
                   <meshStandardMaterial
-                    color="#f9a8d4"
-                    roughness={0.38}
-                    metalness={0.06}
-                    emissive="#ec4899"
-                    emissiveIntensity={0.24}
+                    map={oilTexture}
+                    color="#1f3b5b"
+                    roughness={0.48}
+                    metalness={0.2}
+                    emissive="#60a5fa"
+                    emissiveIntensity={0.16}
                   />
                 </mesh>
-                <mesh position={[0.115, 0.79, 0.03]} scale={[1, 0.94, 1.08]}>
-                  <sphereGeometry args={[0.22, 44, 44]} />
-                  <meshStandardMaterial
-                    color="#f9a8d4"
-                    roughness={0.38}
-                    metalness={0.06}
-                    emissive="#ec4899"
-                    emissiveIntensity={0.24}
-                  />
+                <mesh position={[0, 0.93, 0.15]}>
+                  <sphereGeometry args={[0.035, 20, 20]} />
+                  <meshStandardMaterial color="#fde68a" emissive="#f59e0b" emissiveIntensity={2.2} roughness={0.14} metalness={0.3} />
                 </mesh>
-                <mesh position={[0, 0.79, 0.09]}>
-                  <capsuleGeometry args={[0.02, 0.24, 8, 14]} />
-                  <meshStandardMaterial color="#7f1d1d" roughness={0.56} metalness={0.04} />
+                <mesh position={[-0.06, 0.87, 0.18]} rotation={[0, -0.2, 0]}>
+                  <sphereGeometry args={[0.02, 16, 16]} />
+                  <meshStandardMaterial color="#ffffff" emissive="#e0f2fe" emissiveIntensity={1.9} roughness={0.08} metalness={0.22} />
                 </mesh>
-                <mesh position={[0, 0.71, -0.06]} scale={[0.74, 0.52, 0.72]}>
-                  <sphereGeometry args={[0.16, 24, 24]} />
-                  <meshStandardMaterial color="#f472b6" roughness={0.44} metalness={0.08} />
+                <mesh position={[0.06, 0.87, 0.18]} rotation={[0, 0.2, 0]}>
+                  <sphereGeometry args={[0.02, 16, 16]} />
+                  <meshStandardMaterial color="#ffffff" emissive="#e0f2fe" emissiveIntensity={1.9} roughness={0.08} metalness={0.22} />
                 </mesh>
-                {LEAD_BRAIN_LOBES.map((lobe, index) => (
-                  <mesh key={`lead-lobe-${index}`} position={lobe.position}>
-                    <sphereGeometry args={[lobe.radius, 22, 22]} />
-                    <meshStandardMaterial
-                      color="#f9a8d4"
-                      roughness={0.42}
-                      metalness={0.04}
-                      emissive="#ec4899"
-                      emissiveIntensity={0.2}
-                    />
-                  </mesh>
-                ))}
+                <mesh position={[0, 0.68, 0.02]} rotation={[0.25, 0, 0]}>
+                  <capsuleGeometry args={[0.05, 0.24, 8, 14]} />
+                  <meshStandardMaterial map={oilTexture} color="#0b1b32" roughness={0.52} metalness={0.18} />
+                </mesh>
                 {leadBrainGyriCurves.map((curve, index) => (
                   <mesh
                     key={`lead-gyrus-${index}`}
                     ref={(node) => { leadGyriRefs.current[index] = node; }}
                   >
-                    <tubeGeometry args={[curve, 56, 0.0075, 8, false]} />
+                    <tubeGeometry args={[curve, 68, 0.0075, 8, false]} />
                     <meshStandardMaterial
-                      color="#fdf2f8"
-                      roughness={0.34}
-                      metalness={0.06}
-                      emissive="#f472b6"
-                      emissiveIntensity={0.35}
+                      color="#fde68a"
+                      roughness={0.38}
+                      metalness={0.2}
+                      emissive="#f59e0b"
+                      emissiveIntensity={0.74}
+                      transparent
+                      opacity={0.85}
                     />
                   </mesh>
                 ))}
@@ -733,13 +834,15 @@ const AgentAvatar: React.FC<AgentProps> = ({
                     key={`lead-sulcus-${index}`}
                     ref={(node) => { leadSulciRefs.current[index] = node; }}
                   >
-                    <tubeGeometry args={[curve, 52, 0.011, 8, false]} />
+                    <tubeGeometry args={[curve, 64, 0.01, 8, false]} />
                     <meshStandardMaterial
-                      color="#5b132f"
-                      roughness={0.72}
-                      metalness={0.02}
-                      emissive="#3b0a1a"
-                      emissiveIntensity={0.08}
+                      color="#bfdbfe"
+                      roughness={0.3}
+                      metalness={0.25}
+                      emissive="#60a5fa"
+                      emissiveIntensity={0.4}
+                      transparent
+                      opacity={0.72}
                     />
                   </mesh>
                 ))}
@@ -752,13 +855,13 @@ const AgentAvatar: React.FC<AgentProps> = ({
                   >
                     <torusGeometry args={ring.args} />
                     <meshStandardMaterial
-                      color="#67e8f9"
-                      emissive="#06b6d4"
-                      emissiveIntensity={1.2}
-                      roughness={0.16}
-                      metalness={0.6}
+                      color="#fde68a"
+                      emissive="#f59e0b"
+                      emissiveIntensity={1.5}
+                      roughness={0.12}
+                      metalness={0.62}
                       transparent
-                      opacity={0.55}
+                      opacity={0.56}
                     />
                   </mesh>
                 ))}
@@ -769,13 +872,13 @@ const AgentAvatar: React.FC<AgentProps> = ({
                   >
                     <tubeGeometry args={[curve, 56, 0.0065, 8, false]} />
                     <meshStandardMaterial
-                      color="#a5f3fc"
-                      emissive="#22d3ee"
-                      emissiveIntensity={1.35}
-                      roughness={0.2}
+                      color="#fff7ed"
+                      emissive="#fb923c"
+                      emissiveIntensity={1.65}
+                      roughness={0.16}
                       metalness={0.45}
                       transparent
-                      opacity={0.82}
+                      opacity={0.86}
                     />
                   </mesh>
                 ))}
@@ -785,20 +888,20 @@ const AgentAvatar: React.FC<AgentProps> = ({
                     ref={(node) => { leadSparkRefs.current[index] = node; }}
                     position={[0, 0.79, 0.02]}
                   >
-                    <sphereGeometry args={[0.018 - index * 0.003, 12, 12]} />
-                    <meshBasicMaterial color="#67e8f9" transparent opacity={0.62} />
+                    <sphereGeometry args={[0.024 - index * 0.004, 14, 14]} />
+                    <meshBasicMaterial color="#fcd34d" transparent opacity={0.78} />
                   </mesh>
                 ))}
-                <mesh position={[0, 0.79, 0.03]} scale={[1.04, 0.93, 1.12]}>
+                <mesh position={[0, 0.79, 0.03]} scale={[1.06, 0.96, 1.16]}>
                   <sphereGeometry args={[0.29, 56, 56]} />
                   <meshPhysicalMaterial
-                    color="#bae6fd"
-                    roughness={0.06}
-                    metalness={0.22}
+                    color="#fef3c7"
+                    roughness={0.08}
+                    metalness={0.3}
                     transparent
-                    opacity={0.23}
-                    transmission={0.7}
-                    thickness={0.28}
+                    opacity={0.14}
+                    transmission={0.88}
+                    thickness={0.2}
                     clearcoat={1}
                     clearcoatRoughness={0.08}
                   />
@@ -806,13 +909,17 @@ const AgentAvatar: React.FC<AgentProps> = ({
               </group>
             </>
           ) : (
-            <mesh ref={headRef} position={[0, 0.72, 0]}>
+            <mesh ref={headRef} position={[0, 0.72, 0]} scale={nonLeadHeadScale}>
               {renderHeadGeometry()}
               <MeshDistortMaterial 
-                  color={headColor} 
-                  distort={isHumanFace ? (isSpawning ? 0.25 : (isTalking ? 0.12 : 0)) : (isSpawning ? 0.8 : (isTalking ? 0.4 : 0))} 
-                  speed={isSpawning ? 6 : (isTalking ? 4 : 2)} 
-                  {...matProps}
+                  map={oilTexture}
+                  color={headColor}
+                  distort={isSpawning ? artConfig.distort + 0.24 : (isTalking ? artConfig.distort : artConfig.distort * 0.45)}
+                  speed={isSpawning ? 6 : (isTalking ? 4.5 : 2.2)}
+                  roughness={artConfig.roughness}
+                  metalness={artConfig.metalness}
+                  emissive={style.color}
+                  emissiveIntensity={isTalking ? 0.16 : 0.05}
               />
               {isHumanFace && (
                   <group position={[0, 0.01, 0.24]}>
@@ -888,41 +995,46 @@ const AgentAvatar: React.FC<AgentProps> = ({
           {/* Body */}
           {isLeadAgent ? (
             <group>
-              <mesh ref={bodyRef} position={[0, 0.16, 0]} rotation={[0.06, 0, 0]}>
-                <capsuleGeometry args={[0.16, 0.34, 8, 16]} />
+              <mesh ref={bodyRef} position={[0, 0.14, 0]} rotation={[0.05, 0, 0]}>
+                <capsuleGeometry args={[0.14, 0.52, 8, 20]} />
                 <meshStandardMaterial
-                  color="#0f172a"
-                  roughness={0.22}
-                  metalness={0.72}
-                  emissive="#0e7490"
-                  emissiveIntensity={0.45}
+                  map={oilTexture}
+                  color="#0a1225"
+                  roughness={0.58}
+                  metalness={0.16}
+                  emissive="#1d4b77"
+                  emissiveIntensity={0.3}
                   transparent
-                  opacity={0.96}
+                  opacity={0.98}
                 />
               </mesh>
-              <mesh position={[0, -0.03, 0.02]} rotation={[0.08, 0, 0]}>
-                <torusGeometry args={[0.21, 0.09, 16, 44, Math.PI * 1.96]} />
-                <meshStandardMaterial color="#1f2937" roughness={0.3} metalness={0.45} />
+              <mesh position={[0, 0.18, 0.16]}>
+                <sphereGeometry args={[0.034, 16, 16]} />
+                <meshStandardMaterial color="#fde68a" emissive="#f59e0b" emissiveIntensity={2.2} roughness={0.12} metalness={0.3} />
               </mesh>
-              <mesh position={[-0.18, -0.13, 0.12]} rotation={[0.16, 0.35, 1.1]}>
-                <capsuleGeometry args={[0.05, 0.24, 6, 12]} />
-                <meshStandardMaterial color="#0f172a" roughness={0.25} metalness={0.62} />
+              <mesh position={[0, 0.02, 0.14]}>
+                <sphereGeometry args={[0.026, 16, 16]} />
+                <meshStandardMaterial color="#fdba74" emissive="#fb923c" emissiveIntensity={1.8} roughness={0.16} metalness={0.24} />
               </mesh>
-              <mesh position={[0.18, -0.13, 0.12]} rotation={[0.16, -0.35, -1.1]}>
-                <capsuleGeometry args={[0.05, 0.24, 6, 12]} />
-                <meshStandardMaterial color="#0f172a" roughness={0.25} metalness={0.62} />
+              <mesh position={[-0.11, -0.34, 0.02]} rotation={[0.08, 0.1, 0.08]}>
+                <capsuleGeometry args={[0.046, 0.36, 6, 12]} />
+                <meshStandardMaterial map={oilTexture} color="#0b1428" roughness={0.62} metalness={0.14} />
+              </mesh>
+              <mesh position={[0.11, -0.34, 0.02]} rotation={[0.08, -0.1, -0.08]}>
+                <capsuleGeometry args={[0.046, 0.36, 6, 12]} />
+                <meshStandardMaterial map={oilTexture} color="#0b1428" roughness={0.62} metalness={0.14} />
               </mesh>
               <mesh ref={leftArmRef} position={[-0.19, 0.13, 0.12]}>
-                <capsuleGeometry args={[0.036, 0.24, 6, 10]} />
-                <meshStandardMaterial color="#38bdf8" roughness={0.4} metalness={0.45} emissive="#0891b2" emissiveIntensity={0.4} />
+                <capsuleGeometry args={[0.034, 0.3, 6, 10]} />
+                <meshStandardMaterial map={oilTexture} color="#1e3a5f" roughness={0.6} metalness={0.16} emissive="#1e40af" emissiveIntensity={0.2} />
               </mesh>
               <mesh ref={rightArmRef} position={[0.19, 0.13, 0.12]}>
-                <capsuleGeometry args={[0.036, 0.24, 6, 10]} />
-                <meshStandardMaterial color="#38bdf8" roughness={0.4} metalness={0.45} emissive="#0891b2" emissiveIntensity={0.4} />
+                <capsuleGeometry args={[0.034, 0.3, 6, 10]} />
+                <meshStandardMaterial map={oilTexture} color="#1e3a5f" roughness={0.6} metalness={0.16} emissive="#1e40af" emissiveIntensity={0.2} />
               </mesh>
-              <mesh position={[0, -0.16, 0]}>
-                <cylinderGeometry args={[0.34, 0.38, 0.1, 48]} />
-                <meshStandardMaterial color="#082f49" roughness={0.5} metalness={0.5} emissive="#155e75" emissiveIntensity={0.35} />
+              <mesh position={[0, -0.24, -0.02]} rotation={[0.14, 0, 0]}>
+                <torusGeometry args={[0.24, 0.08, 16, 44, Math.PI * 1.9]} />
+                <meshStandardMaterial map={oilTexture} color="#172554" roughness={0.64} metalness={0.14} />
               </mesh>
             </group>
           ) : (
@@ -931,9 +1043,10 @@ const AgentAvatar: React.FC<AgentProps> = ({
                 <mesh ref={bodyRef} position={[0, 0.1, 0]}>
                     <capsuleGeometry args={[0.18, 0.5, 4, 12]} />
                     <meshStandardMaterial 
-                        color={isHumanFace ? style.color : (theme === AppTheme.CLASSIC ? '#555' : "#0a0a0f")} 
-                        roughness={isHumanFace ? 0.85 : (theme === AppTheme.REALISTIC ? 0.2 : 0.1)} 
-                        metalness={isHumanFace ? 0.2 : 0.9} 
+                        map={oilTexture}
+                        color={isHumanFace ? style.color : (theme === AppTheme.CLASSIC ? '#555' : "#0a0a0f")}
+                        roughness={artConfig.roughness}
+                        metalness={artConfig.metalness}
                         transparent 
                         opacity={theme === AppTheme.CLASSIC ? 0.8 : 1}
                     />
@@ -944,11 +1057,11 @@ const AgentAvatar: React.FC<AgentProps> = ({
                 <>
                   <mesh position={[-0.09, -0.34, 0]}>
                       <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
-                      <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+                      <meshStandardMaterial map={oilTexture} color="#334155" roughness={artConfig.roughness} metalness={artConfig.metalness * 0.6} />
                   </mesh>
                   <mesh position={[0.09, -0.34, 0]}>
                       <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
-                      <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+                      <meshStandardMaterial map={oilTexture} color="#334155" roughness={artConfig.roughness} metalness={artConfig.metalness * 0.6} />
                   </mesh>
                 </>
               )}
@@ -958,15 +1071,74 @@ const AgentAvatar: React.FC<AgentProps> = ({
                 <>
                     <mesh ref={leftArmRef} position={[-0.25, 0.3, 0]}>
                         <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
-                        <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
+                        <meshStandardMaterial map={oilTexture} color={isHumanFace ? skinTone : baseColor} roughness={artConfig.roughness} metalness={artConfig.metalness} />
                     </mesh>
                     <mesh ref={rightArmRef} position={[0.25, 0.3, 0]}>
                         <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
-                        <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
+                        <meshStandardMaterial map={oilTexture} color={isHumanFace ? skinTone : baseColor} roughness={artConfig.roughness} metalness={artConfig.metalness} />
                     </mesh>
                 </>
               )}
             </>
+          )}
+
+          {artStyle === 'postmodernism' && (
+            <group position={[0, 0.52, 0.24]}>
+              <mesh position={[-0.14, 0.05, 0]} rotation={[0.24, -0.3, 0.2]}>
+                <boxGeometry args={[0.18, 0.09, 0.012]} />
+                <meshStandardMaterial color="#f43f5e" roughness={0.52} metalness={0.18} />
+              </mesh>
+              <mesh position={[0.12, -0.02, 0.01]} rotation={[-0.18, 0.22, -0.2]}>
+                <boxGeometry args={[0.2, 0.1, 0.012]} />
+                <meshStandardMaterial color="#0ea5e9" roughness={0.5} metalness={0.2} />
+              </mesh>
+            </group>
+          )}
+
+          {!isLeadAgent && artStyle === 'expressionism' && (
+            <mesh position={[0, 0.46, 0.26]} rotation={[0.12, 0, 0]}>
+              <planeGeometry args={[0.38, 0.26]} />
+              <meshBasicMaterial color="#f97316" transparent opacity={0.22} />
+            </mesh>
+          )}
+
+          {!isLeadAgent && artStyle === 'eclecticism' && (
+            <group position={[0, 0.52, 0.24]}>
+              <mesh position={[-0.08, 0.02, 0]} rotation={[0.1, -0.4, 0.4]}>
+                <torusGeometry args={[0.06, 0.016, 8, 20]} />
+                <meshStandardMaterial color="#a855f7" roughness={0.52} metalness={0.24} />
+              </mesh>
+              <mesh position={[0.1, -0.03, 0.01]} rotation={[0.18, 0.4, -0.3]}>
+                <octahedronGeometry args={[0.06]} />
+                <meshStandardMaterial color="#14b8a6" roughness={0.6} metalness={0.18} />
+              </mesh>
+            </group>
+          )}
+
+          {!isLeadAgent && artStyle === 'structuralism' && (
+            <group position={[0, 0.26, 0]}>
+              <mesh position={[0, 0.08, 0.22]}>
+                <boxGeometry args={[0.36, 0.22, 0.01]} />
+                <meshBasicMaterial color="#cbd5e1" transparent opacity={0.1} />
+              </mesh>
+              <mesh position={[0, 0.08, 0.221]}>
+                <ringGeometry args={[0.09, 0.1, 24]} />
+                <meshBasicMaterial color="#22d3ee" transparent opacity={0.4} />
+              </mesh>
+            </group>
+          )}
+
+          {!isLeadAgent && artStyle === 'geometricism' && (
+            <group position={[0, 0.46, 0.2]}>
+              <mesh position={[-0.09, 0.04, 0]} rotation={[0.24, 0.4, 0.2]}>
+                <tetrahedronGeometry args={[0.07]} />
+                <meshStandardMaterial color="#8b5cf6" roughness={0.52} metalness={0.3} />
+              </mesh>
+              <mesh position={[0.1, -0.02, 0]} rotation={[-0.2, -0.3, 0.1]}>
+                <icosahedronGeometry args={[0.065]} />
+                <meshStandardMaterial color="#f59e0b" roughness={0.5} metalness={0.32} />
+              </mesh>
+            </group>
           )}
 
           <group position={[0, -0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
