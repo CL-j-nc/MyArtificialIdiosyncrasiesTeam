@@ -19,7 +19,7 @@ const DEFAULT_MEMORY: MemoryStore = {
   learnedFacts: [
     "系统 Root 已初始化为 CORE AI 编排器。",
     "Telegram Bot 上行链路能力已上线。",
-    "多智能体团队由 Gemini (编排中枢), Groq (推理引擎), 和 Ollama (本地节点) 组成。"
+    "多智能体团队当前包含 5 位拟人化成员：Finisher、Edge Lord、Narrator、Haiku、Rabbit Hole。"
   ],
   history: []
 };

@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { AgentStyle, ModelProvider } from '../types';
+import { AgentStyle } from '../types';
+import { AGENT_PROFILES, DEFAULT_AGENT_ID } from '../agentProfiles';
 
 interface AgentSettingsModalProps {
   isOpen: boolean;
@@ -10,19 +11,15 @@ interface AgentSettingsModalProps {
 }
 
 const AgentSettingsModal: React.FC<AgentSettingsModalProps> = ({ isOpen, onClose, agentStyles, onUpdateStyle }) => {
-  const [activeTab, setActiveTab] = useState<string>(ModelProvider.GEMINI);
+  const [activeTab, setActiveTab] = useState<string>(DEFAULT_AGENT_ID);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const currentStyle = agentStyles.find(s => s.id === activeTab) || {
-    id: activeTab,
-    color: '#38bdf8',
-    shape: 'sphere',
-    hasBody: true,
-    hasArms: true,
-    faceType: 'visor',
-    scale: 1
+  const activeProfile = AGENT_PROFILES.find(profile => profile.id === activeTab) || AGENT_PROFILES[0];
+  const currentStyle: AgentStyle = agentStyles.find(s => s.id === activeTab) || {
+    id: activeProfile.id,
+    ...activeProfile.defaultStyle
   };
 
   const handleUpdate = (updates: Partial<AgentStyle>) => {
@@ -56,13 +53,16 @@ const AgentSettingsModal: React.FC<AgentSettingsModalProps> = ({ isOpen, onClose
           <div className="flex flex-1 overflow-hidden">
               {/* Sidebar */}
               <div className="w-48 border-r border-white/10 bg-black/20 p-4 space-y-2">
-                  {[ModelProvider.GEMINI, ModelProvider.GROQ, ModelProvider.OLLAMA].map(id => (
+                  {AGENT_PROFILES.map(profile => (
                       <button
-                        key={id}
-                        onClick={() => setActiveTab(id)}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all ${activeTab === id ? 'bg-white/10 text-white border border-white/10' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+                        key={profile.id}
+                        onClick={() => setActiveTab(profile.id)}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all ${activeTab === profile.id ? 'bg-white/10 text-white border border-white/10' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
                       >
-                          {id}
+                          <div className="flex flex-col">
+                            <span>{profile.codename}</span>
+                            <span className="text-[8px] normal-case tracking-normal opacity-60">{profile.displayName}</span>
+                          </div>
                       </button>
                   ))}
               </div>
@@ -126,7 +126,7 @@ const AgentSettingsModal: React.FC<AgentSettingsModalProps> = ({ isOpen, onClose
                       <div className="space-y-2">
                           <label className="text-[9px] text-white/60 uppercase">Face Module</label>
                           <div className="flex gap-2">
-                              {['visor', 'monitor', 'texture'].map(ft => (
+                              {['human', 'visor', 'monitor', 'texture'].map(ft => (
                                   <button
                                     key={ft}
                                     onClick={() => handleUpdate({ faceType: ft as any })}
@@ -137,6 +137,29 @@ const AgentSettingsModal: React.FC<AgentSettingsModalProps> = ({ isOpen, onClose
                               ))}
                           </div>
                       </div>
+
+                      {currentStyle.faceType === 'human' && (
+                          <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                  <label className="text-[9px] text-white/60 uppercase">Skin Tone</label>
+                                  <input
+                                    type="color"
+                                    value={currentStyle.skinTone || '#f1c7a8'}
+                                    onChange={(e) => handleUpdate({ skinTone: e.target.value })}
+                                    className="w-full h-8 rounded-lg cursor-pointer bg-transparent border-none"
+                                  />
+                              </div>
+                              <div className="space-y-2">
+                                  <label className="text-[9px] text-white/60 uppercase">Hair Color</label>
+                                  <input
+                                    type="color"
+                                    value={currentStyle.hairColor || '#312e81'}
+                                    onChange={(e) => handleUpdate({ hairColor: e.target.value })}
+                                    className="w-full h-8 rounded-lg cursor-pointer bg-transparent border-none"
+                                  />
+                              </div>
+                          </div>
+                      )}
 
                       {currentStyle.faceType === 'texture' && (
                           <div className="p-4 bg-white/5 rounded-xl border border-white/5 space-y-2">

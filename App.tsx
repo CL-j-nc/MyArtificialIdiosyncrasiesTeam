@@ -10,21 +10,26 @@ import {
   runSelfDiagnoseWorkflow,
   runThinkingWorkflow,
   runVisionWorkflow,
-  runTranscriptionWorkflow,
   runTTSWorkflow,
   checkApiHealth
 } from './services/geminiService';
-import { MemoryService } from './services/memoryService';
 import TerminalWindow from './components/TerminalWindow';
 import TelegramWidget from './components/TelegramWidget';
 import AgentScene from './components/AgentScene';
 import LearnSkillModal from './components/LearnSkillModal';
 import LiveAudioInterface from './components/LiveAudioInterface';
 import AgentSettingsModal from './components/AgentSettingsModal';
+import { AGENT_PROFILES, AGENT_PROFILE_BY_ID, DEFAULT_AGENT_ID, isAgentId, AgentId } from './agentProfiles';
+
+interface DialogueMessage {
+  id: string;
+  speaker: 'user' | 'agent';
+  agentId: AgentId;
+  text: string;
+  timestamp: string;
+}
 
 const App: React.FC = () => {
-  const memoryService = useMemo(() => MemoryService.getInstance(), []);
-
   const [state, setState] = useState<WorkflowState>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('workflow_state');
@@ -39,7 +44,6 @@ const App: React.FC = () => {
   });
 
   const [input, setInput] = useState('');
-  const [isFeedingBread, setIsFeedingBread] = useState(false);
   const [agentSpeech, setAgentSpeech] = useState<string | null>(null);
   const [activeModel, setActiveModel] = useState<ModelProvider | 'System'>('System');
   const [isLearnModalOpen, setIsLearnModalOpen] = useState(false);
@@ -63,8 +67,21 @@ const App: React.FC = () => {
   
   // Theme State
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(AppTheme.CYBERPUNK);
+  const [isDialogueMode, setIsDialogueMode] = useState(true);
+  const [activeDialogueAgentId, setActiveDialogueAgentId] = useState<AgentId>(DEFAULT_AGENT_ID);
+  const [dialogueMessages, setDialogueMessages] = useState<DialogueMessage[]>(() => {
+    const starter = AGENT_PROFILE_BY_ID[DEFAULT_AGENT_ID];
+    return [{
+      id: crypto.randomUUID(),
+      speaker: 'agent',
+      agentId: starter.id,
+      text: `我是 ${starter.displayName}（${starter.codename}），准备好了。你希望我先处理什么？`,
+      timestamp: new Date().toLocaleTimeString()
+    }];
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dialogueScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { 
     localStorage.setItem('workflow_state', JSON.stringify({ ...state, isRunning: false })); 
@@ -117,6 +134,11 @@ const App: React.FC = () => {
           return updated;
       });
   };
+
+  useEffect(() => {
+    if (!dialogueScrollRef.current) return;
+    dialogueScrollRef.current.scrollTop = dialogueScrollRef.current.scrollHeight;
+  }, [dialogueMessages, activeDialogueAgentId]);
 
   // Periodic Health Check
   useEffect(() => {
@@ -239,6 +261,102 @@ const App: React.FC = () => {
       }
   };
 
+  const activeDialogueMessages = useMemo(
+    () => dialogueMessages.filter(message => message.agentId === activeDialogueAgentId),
+    [dialogueMessages, activeDialogueAgentId]
+  );
+
+  const handleAgentSelection = (candidateId?: string) => {
+    if (!candidateId || !isAgentId(candidateId)) return;
+    const profile = AGENT_PROFILE_BY_ID[candidateId];
+    setActiveDialogueAgentId(candidateId);
+    setIsDialogueMode(true);
+    setAgentSpeech(`${profile.displayName} 已连接。`);
+    if (!dialogueMessages.some(msg => msg.agentId === candidateId && msg.speaker === 'agent')) {
+      setDialogueMessages(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          speaker: 'agent',
+          agentId: profile.id,
+          text: `我是 ${profile.displayName}，负责${profile.role}。你可以直接告诉我目标。`,
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ]);
+    }
+  };
+
+  const handleDialogueSend = async () => {
+    const textToProcess = input.trim();
+    if (!textToProcess || state.isRunning) return;
+
+    const profile = AGENT_PROFILE_BY_ID[activeDialogueAgentId];
+    const history = activeDialogueMessages
+      .slice(-6)
+      .map(msg => `${msg.speaker === 'user' ? '用户' : profile.displayName}: ${msg.text}`)
+      .join('\n');
+
+    setDialogueMessages(prev => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        speaker: 'user',
+        agentId: profile.id,
+        text: textToProcess,
+        timestamp: new Date().toLocaleTimeString()
+      }
+    ]);
+
+    setInput('');
+    setState(prev => ({ ...prev, isRunning: true, currentStage: WorkflowType.CHAT, result: null }));
+    setActiveModel(profile.modelHint || ModelProvider.GEMINI);
+    activeBotTriggerRef.current = null;
+
+    const personaPrompt = [
+      `你正在扮演多智能体团队成员：${profile.displayName}（${profile.codename}）。`,
+      `职责：${profile.role}。`,
+      `人格特征：${profile.quirk}`,
+      '对话规则：',
+      '- 全程中文，口吻自然拟人化。',
+      '- 回答 2-4 句，优先给可执行建议。',
+      '- 如果信息不足，先问一个最关键问题再给临时方案。',
+      '[最近对话]',
+      history || '（无）',
+      `[用户最新输入] ${textToProcess}`
+    ].join('\n');
+
+    try {
+      const result = await runSmartRoute(personaPrompt, addLog);
+      const trimmedResult = result.trim() || '收到，我正在整理你的请求。';
+      setDialogueMessages(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          speaker: 'agent',
+          agentId: profile.id,
+          text: trimmedResult,
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ]);
+      setAgentSpeech(trimmedResult.slice(0, 60));
+      setState(prev => ({ ...prev, isRunning: false, result: null }));
+      setActiveModel('System');
+    } catch (error: any) {
+      setDialogueMessages(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          speaker: 'agent',
+          agentId: profile.id,
+          text: `当前无法响应（${error?.message || '未知错误'}），请稍后重试。`,
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ]);
+      setState(prev => ({ ...prev, isRunning: false, result: null }));
+      setActiveModel('System');
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -274,9 +392,8 @@ const App: React.FC = () => {
     <div className={`relative w-full h-screen overflow-hidden font-sans select-none flex ${textColorClass} transition-colors duration-1000`}>
       <div className="absolute inset-0 z-0 bg-gray-900">
           <AgentScene 
-            onAgentClick={(id) => handleRunWorkflow(WorkflowType.SMART_ROUTE, `Agent interaction: ${id}`)} 
+            onAgentClick={handleAgentSelection} 
             isProcessing={state.isRunning}
-            isLearning={isFeedingBread}
             isGlitched={state.isGlitched}
             activeAgent={activeModel}
             agentSpeech={agentSpeech}
@@ -365,7 +482,59 @@ const App: React.FC = () => {
                     <LiveAudioInterface onClose={() => setIsLiveActive(false)} addLog={addLog} />
                  </div>
                )}
-               {state.result && (
+               {isDialogueMode && (
+                 <div className={`w-full max-w-3xl h-[68vh] backdrop-blur-3xl border rounded-3xl shadow-2xl pointer-events-auto animate-fade-in-up flex flex-col overflow-hidden ${panelBgClass}`}>
+                    <div className={`px-5 py-4 border-b ${isLightTheme ? 'border-black/10 bg-black/5' : 'border-white/10 bg-white/5'} flex flex-col gap-3`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[9px] uppercase font-black tracking-[0.2em] text-cyan-500">Dialogue Channel</p>
+                          <p className={`text-xs font-bold mt-1 ${isLightTheme ? 'text-slate-800' : 'text-white'}`}>
+                            {AGENT_PROFILE_BY_ID[activeDialogueAgentId].displayName} · {AGENT_PROFILE_BY_ID[activeDialogueAgentId].codename}
+                          </p>
+                          <p className={`text-[10px] mt-1 ${isLightTheme ? 'text-slate-500' : 'text-slate-300'}`}>
+                            {AGENT_PROFILE_BY_ID[activeDialogueAgentId].role}
+                          </p>
+                        </div>
+                        <div className={`text-[10px] font-mono px-2 py-1 rounded-lg border ${isLightTheme ? 'border-black/10 text-slate-500' : 'border-white/10 text-slate-300'}`}>
+                          {state.isRunning ? 'RESPONDING...' : 'ONLINE'}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
+                        {AGENT_PROFILES.map(profile => (
+                          <button
+                            key={profile.id}
+                            onClick={() => handleAgentSelection(profile.id)}
+                            className={`px-3 py-1.5 rounded-xl border text-[9px] font-black tracking-wide whitespace-nowrap transition-all ${
+                              profile.id === activeDialogueAgentId
+                                ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
+                                : `${isLightTheme ? 'border-black/10 text-slate-600 hover:bg-black/5' : 'border-white/10 text-slate-300 hover:bg-white/5'}`
+                            }`}
+                          >
+                            {profile.codename}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div ref={dialogueScrollRef} className={`flex-1 p-4 overflow-y-auto custom-scrollbar space-y-3 ${isLightTheme ? 'bg-white/30' : 'bg-black/20'}`}>
+                      {activeDialogueMessages.length === 0 && (
+                        <p className={`text-[11px] ${isLightTheme ? 'text-slate-500' : 'text-slate-400'}`}>开始一条消息，和当前 Agent 进入对话。</p>
+                      )}
+                      {activeDialogueMessages.map(msg => (
+                        <div key={msg.id} className={`flex ${msg.speaker === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] px-3 py-2 rounded-2xl border ${msg.speaker === 'user'
+                            ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-50'
+                            : `${isLightTheme ? 'bg-white border-black/10 text-slate-700' : 'bg-black/50 border-white/10 text-slate-100'}`}`}>
+                            <p className="text-[11px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                            <p className={`mt-1 text-[9px] ${msg.speaker === 'user' ? 'text-cyan-200/70' : (isLightTheme ? 'text-slate-400' : 'text-slate-400')}`}>
+                              {msg.timestamp}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                 </div>
+               )}
+               {!isDialogueMode && state.result && (
                   <div className={`w-full max-w-2xl backdrop-blur-3xl border rounded-3xl p-0 shadow-2xl pointer-events-auto animate-fade-in-up flex flex-col max-h-[70vh] ${panelBgClass}`}>
                       <div className={`flex justify-between items-center px-6 py-4 border-b rounded-t-3xl ${isLightTheme ? 'border-black/5 bg-black/5' : 'border-white/5 bg-white/5'}`}>
                           <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-[0.2em]">Payload_Output</span>
@@ -393,7 +562,7 @@ const App: React.FC = () => {
                 <div className="flex-1 relative flex items-center">
                     <textarea 
                         className={`w-full border text-[13px] py-4 px-5 pr-12 rounded-2xl outline-none resize-none h-24 lg:h-20 font-mono transition-all custom-scrollbar leading-relaxed ${isLightTheme ? 'bg-white/50 border-black/10 text-black placeholder:text-black/30 focus:border-cyan-500' : 'bg-black/50 border-white/5 text-white placeholder:text-white/10 focus:border-cyan-500/40'}`}
-                        placeholder={isThinkingMode ? "DEEP_REASONING_MODE_ACTIVE..." : "INPUT_DIRECTIVE_VECTOR_HERE..."}
+                        placeholder={isDialogueMode ? `对 ${AGENT_PROFILE_BY_ID[activeDialogueAgentId].displayName} 说点什么...` : (isThinkingMode ? "DEEP_REASONING_MODE_ACTIVE..." : "INPUT_DIRECTIVE_VECTOR_HERE...")}
                         value={input}
                         onChange={e => setInput(e.target.value)}
                     />
@@ -406,16 +575,23 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex flex-row lg:flex-col gap-3 shrink-0">
                     <button 
-                        onClick={() => handleRunWorkflow(WorkflowType.SMART_ROUTE)}
+                        onClick={() => isDialogueMode ? handleDialogueSend() : handleRunWorkflow(WorkflowType.SMART_ROUTE)}
                         disabled={state.isRunning || !input.trim()}
                         className="w-full lg:w-auto bg-cyan-600 hover:bg-cyan-500 text-black h-12 px-10 rounded-2xl text-[11px] font-black tracking-widest shadow-2xl disabled:opacity-20 uppercase"
                     >
-                       EXECUTE
+                       {isDialogueMode ? 'SEND' : 'EXECUTE'}
                     </button>
                     <div className="flex gap-2 w-full">
                       <button 
+                        onClick={() => setIsDialogueMode(prev => !prev)}
+                        className={`w-full text-[9px] font-black px-3 py-1.5 rounded-xl transition-all border ${isDialogueMode ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : `${isLightTheme ? 'bg-black/5 border-black/5 text-black/40' : 'bg-white/5 border-white/5 text-white/30'}`}`}
+                      >
+                         DIALOG_MODE
+                      </button>
+                      <button 
                         onClick={() => setIsThinkingMode(!isThinkingMode)}
-                        className={`w-full text-[9px] font-black px-3 py-1.5 rounded-xl transition-all border ${isThinkingMode ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)]' : `${isLightTheme ? 'bg-black/5 border-black/5 text-black/40' : 'bg-white/5 border-white/5 text-white/30'}`}`}
+                        disabled={isDialogueMode}
+                        className={`w-full text-[9px] font-black px-3 py-1.5 rounded-xl transition-all border disabled:opacity-40 ${isThinkingMode ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)]' : `${isLightTheme ? 'bg-black/5 border-black/5 text-black/40' : 'bg-white/5 border-white/5 text-white/30'}`}`}
                       >
                          THINKING_32K
                       </button>

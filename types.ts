@@ -88,7 +88,9 @@ export interface AgentStyle {
   shape: 'sphere' | 'box' | 'octahedron' | 'dodecahedron';
   hasBody: boolean;
   hasArms: boolean;
-  faceType: 'visor' | 'monitor' | 'texture';
+  faceType: 'visor' | 'monitor' | 'texture' | 'human';
+  skinTone?: string;
+  hairColor?: string;
   textureUrl?: string; 
 }
 

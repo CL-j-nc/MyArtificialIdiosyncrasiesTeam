@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { WorkflowType, WorkflowState, LogEntry, ModelProvider, AgentStyle, AppTheme, BotProfile } from '../types';
 import { 
   runDiagnoseWorkflow, 
@@ -11,11 +11,9 @@ import {
   runSelfDiagnoseWorkflow,
   runThinkingWorkflow,
   runVisionWorkflow,
-  runTranscriptionWorkflow,
   runTTSWorkflow,
   checkApiHealth
 } from '../services/geminiService';
-import { MemoryService } from '../services/memoryService';
 import TerminalWindow from './TerminalWindow';
 import TelegramWidget from './TelegramWidget';
 import AgentScene from './AgentScene';
@@ -24,8 +22,6 @@ import LiveAudioInterface from './LiveAudioInterface';
 import AgentSettingsModal from './AgentSettingsModal';
 
 const App: React.FC = () => {
-  const memoryService = useMemo(() => MemoryService.getInstance(), []);
-
   const [state, setState] = useState<WorkflowState>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('workflow_state');
@@ -40,7 +36,6 @@ const App: React.FC = () => {
   });
 
   const [input, setInput] = useState('');
-  const [isFeedingBread, setIsFeedingBread] = useState(false);
   const [agentSpeech, setAgentSpeech] = useState<string | null>(null);
   const [activeModel, setActiveModel] = useState<ModelProvider | 'System'>('System');
   const [isLearnModalOpen, setIsLearnModalOpen] = useState(false);
@@ -285,7 +280,6 @@ const App: React.FC = () => {
           <AgentScene 
             onAgentClick={(id) => handleRunWorkflow(WorkflowType.SMART_ROUTE, `Agent interaction: ${id}`)} 
             isProcessing={state.isRunning}
-            isLearning={isFeedingBread}
             isGlitched={state.isGlitched}
             activeAgent={activeModel}
             agentSpeech={agentSpeech}

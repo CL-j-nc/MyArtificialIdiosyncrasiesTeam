@@ -10,13 +10,12 @@ import {
     MeshDistortMaterial,
     MeshWobbleMaterial,
     Html,
-    useTexture,
     MeshReflectorMaterial,
     Stars,
-    Sky
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { ModelProvider, AgentStyle, AppTheme } from '../types';
+import { AGENT_PROFILES, MODEL_TO_AGENT_ID } from '../agentProfiles';
 
 // Augment the JSX namespace to include Three.js elements
 declare global {
@@ -217,8 +216,11 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
   };
 
   const matProps = getMaterialProps();
-  // For classic/sketch feel, use a darker outline or specific color, but here we just adapt properties
+  const isHumanFace = style.faceType === 'human';
+  const skinTone = style.skinTone || '#f1c7a8';
+  const hairColor = style.hairColor || '#312e81';
   const baseColor = theme === AppTheme.CLASSIC ? '#444' : style.color;
+  const headColor = isGlitched ? '#ff2222' : (isHumanFace ? skinTone : baseColor);
 
   return (
     <group ref={group} onClick={(e) => { e.stopPropagation(); onClick(); }} scale={0}>
@@ -229,11 +231,43 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
           <mesh ref={headRef} position={[0, 0.65, 0]}>
             {renderHeadGeometry()}
             <MeshDistortMaterial 
-                color={isGlitched ? "#ff2222" : baseColor} 
-                distort={isSpawning ? 0.8 : (isTalking ? 0.4 : 0)} 
+                color={headColor} 
+                distort={isHumanFace ? (isSpawning ? 0.25 : (isTalking ? 0.12 : 0)) : (isSpawning ? 0.8 : (isTalking ? 0.4 : 0))} 
                 speed={isSpawning ? 6 : (isTalking ? 4 : 2)} 
                 {...matProps}
             />
+            {isHumanFace && (
+                <group position={[0, 0.02, 0.23]}>
+                    <mesh position={[-0.07, 0.05, 0.02]}>
+                        <sphereGeometry args={[0.03, 16, 16]} />
+                        <meshStandardMaterial color="#fffaf5" />
+                    </mesh>
+                    <mesh position={[0.07, 0.05, 0.02]}>
+                        <sphereGeometry args={[0.03, 16, 16]} />
+                        <meshStandardMaterial color="#fffaf5" />
+                    </mesh>
+                    <mesh position={[-0.07, 0.05, 0.045]}>
+                        <sphereGeometry args={[0.014, 12, 12]} />
+                        <meshStandardMaterial color="#111827" />
+                    </mesh>
+                    <mesh position={[0.07, 0.05, 0.045]}>
+                        <sphereGeometry args={[0.014, 12, 12]} />
+                        <meshStandardMaterial color="#111827" />
+                    </mesh>
+                    <mesh position={[0, -0.02, 0.04]}>
+                        <sphereGeometry args={[0.011, 12, 12]} />
+                        <meshStandardMaterial color="#d9a98d" />
+                    </mesh>
+                    <mesh position={[0, -0.08, 0.03]} rotation={[Math.PI * 0.1, 0, 0]}>
+                        <torusGeometry args={[0.035, 0.006, 8, 18, Math.PI]} />
+                        <meshStandardMaterial color="#7f1d1d" />
+                    </mesh>
+                    <mesh position={[0, 0.17, 0.02]}>
+                        <sphereGeometry args={[0.18, 22, 22, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                        <meshStandardMaterial color={hairColor} roughness={0.9} metalness={0.1} />
+                    </mesh>
+                </group>
+            )}
             {style.faceType === 'visor' && (
                 <mesh position={[0, 0.03, 0.22]}>
                     <boxGeometry args={[0.3, 0.06, 0.05]} />
@@ -269,13 +303,26 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
             <mesh ref={bodyRef} position={[0, 0.1, 0]}>
                 <capsuleGeometry args={[0.18, 0.5, 4, 12]} />
                 <meshStandardMaterial 
-                    color={theme === AppTheme.CLASSIC ? '#555' : "#0a0a0f"} 
-                    roughness={theme === AppTheme.REALISTIC ? 0.2 : 0.1} 
-                    metalness={0.9} 
+                    color={isHumanFace ? style.color : (theme === AppTheme.CLASSIC ? '#555' : "#0a0a0f")} 
+                    roughness={isHumanFace ? 0.85 : (theme === AppTheme.REALISTIC ? 0.2 : 0.1)} 
+                    metalness={isHumanFace ? 0.2 : 0.9} 
                     transparent 
                     opacity={theme === AppTheme.CLASSIC ? 0.8 : 1}
                 />
             </mesh>
+          )}
+
+          {style.hasBody && isHumanFace && (
+            <>
+              <mesh position={[-0.09, -0.34, 0]}>
+                  <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+                  <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+              </mesh>
+              <mesh position={[0.09, -0.34, 0]}>
+                  <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+                  <meshStandardMaterial color="#334155" roughness={0.8} metalness={0.2} />
+              </mesh>
+            </>
           )}
 
           {/* Arms */}
@@ -283,11 +330,11 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
             <>
                 <mesh ref={leftArmRef} position={[-0.25, 0.3, 0]}>
                     <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
-                    <meshStandardMaterial color={baseColor} {...matProps} />
+                    <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
                 </mesh>
                 <mesh ref={rightArmRef} position={[0.25, 0.3, 0]}>
                     <capsuleGeometry args={[0.04, 0.3, 4, 8]} />
-                    <meshStandardMaterial color={baseColor} {...matProps} />
+                    <meshStandardMaterial color={isHumanFace ? skinTone : baseColor} {...matProps} />
                 </mesh>
             </>
           )}
@@ -312,7 +359,7 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
           <Html position={[0, 1.2, 0]} center distanceFactor={8}>
             <div className={`flex flex-col items-center pointer-events-none select-none transition-all duration-1000 ${spawned && !isSpawning ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <div className={`px-3 py-1 ${theme === AppTheme.CLASSIC ? 'bg-white border-black text-black' : 'bg-black/90 border-white/20 text-white'} border rounded-full text-[10px] font-bold tracking-tighter whitespace-nowrap shadow-2xl mb-1 flex items-center gap-2 ${isSpawning ? 'animate-pulse' : ''}`} style={theme === AppTheme.CLASSIC ? {} : { color: style.color }}>
-                    <span>{name.toUpperCase()}</span>
+                    <span>{name}</span>
                     <span className="opacity-50">|</span>
                     <span className="text-[8px] font-mono opacity-80">{role}</span>
                 </div>
@@ -333,9 +380,6 @@ const AgentAvatar: React.FC<AgentProps> = ({ name, role, style, position, isTalk
 interface SceneProps {
     onAgentClick: (agentId?: string) => void;
     isProcessing: boolean;
-    isLearning: boolean;
-    isDiagnosing?: boolean;
-    isToScreen?: boolean;
     isGlitched?: boolean;
     activeAgent?: ModelProvider | 'System';
     agentSpeech?: string | null;
@@ -424,75 +468,54 @@ const EnvironmentManager: React.FC<{ theme: AppTheme }> = ({ theme }) => {
 const AgentScene: React.FC<SceneProps> = ({ 
     onAgentClick, 
     isProcessing, 
-    isLearning, 
-    isDiagnosing, 
-    isToScreen, 
     isGlitched, 
     activeAgent,
     agentSpeech,
     agentStyles = [],
     theme
 }) => {
-  
-  const getStyle = (id: string, defaultColor: string): AgentStyle => {
-      const found = agentStyles.find(s => s.id === id);
-      return found || {
-          id,
-          color: defaultColor,
+  const getStyle = (profileId: string): AgentStyle => {
+      const found = agentStyles.find(s => s.id === profileId);
+      if (found) return found;
+      const profile = AGENT_PROFILES.find(item => item.id === profileId);
+      if (!profile) {
+        return {
+          id: profileId,
+          color: '#38bdf8',
           shape: 'sphere',
           hasBody: true,
           hasArms: true,
-          faceType: 'visor'
-      };
+          faceType: 'human',
+          skinTone: '#f1c7a8',
+          hairColor: '#312e81'
+        };
+      }
+      return { id: profile.id, ...profile.defaultStyle };
   };
+
+  const activeAgentId = activeAgent && activeAgent !== 'System' ? MODEL_TO_AGENT_ID[activeAgent] : undefined;
 
   return (
     <div className="w-full h-full">
         <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2, 7], fov: 40 }}>
             <EnvironmentManager theme={theme} />
-            
-            <AgentAvatar 
-                key="gemini"
-                name="Gemini" 
-                role="编排中枢" 
-                style={getStyle(ModelProvider.GEMINI, "#38bdf8")}
-                position={[0, 0.5, 1.5]} 
-                isTalking={isProcessing && activeAgent === ModelProvider.GEMINI}
+
+            {AGENT_PROFILES.map(profile => (
+              <AgentAvatar
+                key={profile.id}
+                name={`${profile.codename} · ${profile.displayName}`}
+                role={`${profile.role} // ${profile.quirk}`}
+                style={getStyle(profile.id)}
+                position={profile.scenePosition}
+                isTalking={isProcessing && activeAgentId === profile.id}
                 isGlitched={isGlitched}
-                speechText={activeAgent === ModelProvider.GEMINI ? agentSpeech : null}
-                scale={1.2}
-                onClick={() => onAgentClick(ModelProvider.GEMINI)}
-                delayIndex={1}
+                speechText={activeAgentId === profile.id ? agentSpeech : null}
+                scale={profile.scale}
+                onClick={() => onAgentClick(profile.id)}
+                delayIndex={profile.delayIndex}
                 theme={theme}
-            />
-
-            <AgentAvatar 
-                key="groq"
-                name="Groq" 
-                role="推理引擎" 
-                style={getStyle(ModelProvider.GROQ, "#f59e0b")}
-                position={[-2.8, 0.4, -0.5]} 
-                isTalking={isProcessing && activeAgent === ModelProvider.GROQ}
-                speechText={activeAgent === ModelProvider.GROQ ? agentSpeech : null}
-                scale={1.0}
-                onClick={() => onAgentClick(ModelProvider.GROQ)}
-                delayIndex={0}
-                theme={theme}
-            />
-
-            <AgentAvatar 
-                key="ollama"
-                name="Ollama" 
-                role="边缘节点" 
-                style={getStyle(ModelProvider.OLLAMA, "#10b981")}
-                position={[2.8, 0.4, -0.5]} 
-                isTalking={isProcessing && activeAgent === ModelProvider.OLLAMA}
-                speechText={activeAgent === ModelProvider.OLLAMA ? agentSpeech : null}
-                scale={1.0}
-                onClick={() => onAgentClick(ModelProvider.OLLAMA)}
-                delayIndex={2}
-                theme={theme}
-            />
+              />
+            ))}
 
             <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
                 <mesh position={[-4, 5, -5]}>
