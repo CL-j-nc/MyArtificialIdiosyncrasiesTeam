@@ -112,39 +112,62 @@ const ReflectionFunctionDisplay: React.FC<{
   const safeScripts = scripts.length > 0 ? scripts : ['CORE FUNCTION'];
 
   useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => setTick((prev) => prev + 1), 90);
+    if (!active) {
+      setTick(0);
+      return;
+    }
+    const timer = setInterval(() => setTick((prev) => prev + 1), 80);
     return () => clearInterval(timer);
   }, [active]);
 
-  const cycleLength = 80;
+  const cycleLength = 96;
   const phraseIndex = active ? Math.floor(tick / cycleLength) % safeScripts.length : 0;
   const phrase = safeScripts[phraseIndex];
+  const nextPhrase = safeScripts[(phraseIndex + 1) % safeScripts.length];
   const phase = active ? tick % cycleLength : 0;
 
   let charCount = phrase.length;
   if (active) {
-    if (phase < 30) charCount = Math.max(1, Math.ceil((phase / 30) * phrase.length));
-    else if (phase < 50) charCount = phrase.length;
-    else if (phase < 70) charCount = Math.max(1, phrase.length - Math.ceil(((phase - 50) / 20) * phrase.length));
+    if (phase < 36) charCount = Math.max(1, Math.ceil((phase / 36) * phrase.length));
+    else if (phase < 58) charCount = phrase.length;
+    else if (phase < 82) charCount = Math.max(1, phrase.length - Math.ceil(((phase - 58) / 24) * phrase.length));
     else charCount = 1;
   }
 
   const text = phrase.slice(0, charCount);
-  const scanGlow = active && phase >= 30 && phase <= 52;
+  const scanGlow = active && phase >= 34 && phase <= 62;
+  const stepLabel = `STEP ${phraseIndex + 1}/${safeScripts.length}`;
+  const progressRatio = active ? (phase % cycleLength) / cycleLength : 0.06;
+  const progressWidth = `${Math.max(6, Math.round(progressRatio * 100))}%`;
 
   return (
     <div
-      className={`relative px-2 py-1 rounded-full border text-[8px] font-black tracking-wider uppercase whitespace-nowrap transition-all ${
+      className={`relative px-2 py-1 rounded-xl border text-[8px] font-black tracking-wider uppercase whitespace-nowrap transition-all ${
         active
           ? 'bg-cyan-400/20 border-cyan-300/70 text-cyan-100'
           : 'bg-slate-900/25 border-white/15 text-white/45'
       }`}
     >
-      {text}
-      <span className={`${active ? 'inline-block' : 'hidden'} ml-1 ${tick % 2 === 0 ? 'opacity-100' : 'opacity-30'}`}>|</span>
+      <div className="flex items-center gap-1">
+        <span>{text}</span>
+        <span className={`${active ? 'inline-block' : 'hidden'} ${tick % 2 === 0 ? 'opacity-100' : 'opacity-30'}`}>|</span>
+      </div>
+      <div className="mt-0.5 flex items-center gap-1.5">
+        <span className={`${active ? 'opacity-90' : 'opacity-60'} text-[7px] tracking-normal`}>{stepLabel}</span>
+        <span className={`relative h-[3px] w-20 overflow-hidden rounded-full ${active ? 'bg-cyan-200/30' : 'bg-white/15'}`}>
+          <span
+            className={`absolute left-0 top-0 h-full rounded-full ${active ? 'bg-cyan-200/90' : 'bg-white/45'}`}
+            style={{ width: progressWidth }}
+          />
+        </span>
+      </div>
+      {active && (
+        <div className="mt-0.5 text-[6px] font-semibold tracking-normal text-cyan-100/65">
+          NEXT: {nextPhrase}
+        </div>
+      )}
       {scanGlow && (
-        <span className="absolute left-0 top-0 h-full w-full rounded-full bg-cyan-300/10" />
+        <span className="absolute left-0 top-0 h-full w-full rounded-xl bg-cyan-300/10" />
       )}
     </div>
   );
