@@ -387,6 +387,39 @@ interface SceneProps {
     theme: AppTheme;
 }
 
+interface SceneErrorBoundaryState {
+  hasError: boolean;
+}
+
+class SceneErrorBoundary extends React.Component<{ children: React.ReactNode }, SceneErrorBoundaryState> {
+  state: SceneErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): SceneErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('AgentScene render error:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-[#010103] text-slate-300 text-sm px-4 text-center">
+          3D scene unavailable on this device. Core controls remain accessible.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const SceneFallback: React.FC = () => (
+  <div className="w-full h-full flex items-center justify-center bg-[#010103] text-slate-300 text-sm px-4 text-center">
+    3D scene unavailable on this device. Core controls remain accessible.
+  </div>
+);
+
 const EnvironmentManager: React.FC<{ theme: AppTheme }> = ({ theme }) => {
     switch (theme) {
         case AppTheme.CLASSIC:
@@ -474,6 +507,22 @@ const AgentScene: React.FC<SceneProps> = ({
     agentStyles = [],
     theme
 }) => {
+  const [webglAvailable, setWebglAvailable] = useState(true);
+
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const context =
+        canvas.getContext('webgl2') ||
+        canvas.getContext('webgl') ||
+        canvas.getContext('experimental-webgl');
+      if (!context) setWebglAvailable(false);
+    } catch (error) {
+      console.error('WebGL capability check failed:', error);
+      setWebglAvailable(false);
+    }
+  }, []);
+
   const getStyle = (profileId: string): AgentStyle => {
       const found = agentStyles.find(s => s.id === profileId);
       if (found) return found;
@@ -495,49 +544,55 @@ const AgentScene: React.FC<SceneProps> = ({
 
   const activeAgentId = activeAgent && activeAgent !== 'System' ? MODEL_TO_AGENT_ID[activeAgent] : undefined;
 
+  if (!webglAvailable) {
+    return <SceneFallback />;
+  }
+
   return (
-    <div className="w-full h-full">
-        <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2, 7], fov: 40 }}>
-            <EnvironmentManager theme={theme} />
+    <SceneErrorBoundary>
+      <div className="w-full h-full">
+          <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2, 7], fov: 40 }}>
+              <EnvironmentManager theme={theme} />
 
-            {AGENT_PROFILES.map(profile => (
-              <AgentAvatar
-                key={profile.id}
-                name={`${profile.codename} · ${profile.displayName}`}
-                role={`${profile.role} // ${profile.quirk}`}
-                style={getStyle(profile.id)}
-                position={profile.scenePosition}
-                isTalking={isProcessing && activeAgentId === profile.id}
-                isGlitched={isGlitched}
-                speechText={activeAgentId === profile.id ? agentSpeech : null}
-                scale={profile.scale}
-                onClick={() => onAgentClick(profile.id)}
-                delayIndex={profile.delayIndex}
-                theme={theme}
+              {AGENT_PROFILES.map(profile => (
+                <AgentAvatar
+                  key={profile.id}
+                  name={`${profile.codename} · ${profile.displayName}`}
+                  role={`${profile.role} // ${profile.quirk}`}
+                  style={getStyle(profile.id)}
+                  position={profile.scenePosition}
+                  isTalking={isProcessing && activeAgentId === profile.id}
+                  isGlitched={isGlitched}
+                  speechText={activeAgentId === profile.id ? agentSpeech : null}
+                  scale={profile.scale}
+                  onClick={() => onAgentClick(profile.id)}
+                  delayIndex={profile.delayIndex}
+                  theme={theme}
+                />
+              ))}
+
+              <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                  <mesh position={[-4, 5, -5]}>
+                      <octahedronGeometry args={[0.12]} />
+                      <meshStandardMaterial color={theme === AppTheme.CLASSIC ? "#555" : "#38bdf8"} emissive={theme === AppTheme.CLASSIC ? "#000" : "#38bdf8"} emissiveIntensity={theme === AppTheme.CLASSIC ? 0 : 2} />
+                  </mesh>
+                  <mesh position={[4, 6, -3]}>
+                      <octahedronGeometry args={[0.18]} />
+                      <meshStandardMaterial color={theme === AppTheme.CLASSIC ? "#555" : "#f59e0b"} emissive={theme === AppTheme.CLASSIC ? "#000" : "#f59e0b"} emissiveIntensity={theme === AppTheme.CLASSIC ? 0 : 2} />
+                  </mesh>
+              </Float>
+
+              <OrbitControls 
+                  enablePan={false} 
+                  minPolarAngle={Math.PI/6} 
+                  maxPolarAngle={Math.PI/2.15} 
+                  minDistance={5} 
+                  maxDistance={12} 
+                  makeDefault
               />
-            ))}
-
-            <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-                <mesh position={[-4, 5, -5]}>
-                    <octahedronGeometry args={[0.12]} />
-                    <meshStandardMaterial color={theme === AppTheme.CLASSIC ? "#555" : "#38bdf8"} emissive={theme === AppTheme.CLASSIC ? "#000" : "#38bdf8"} emissiveIntensity={theme === AppTheme.CLASSIC ? 0 : 2} />
-                </mesh>
-                <mesh position={[4, 6, -3]}>
-                    <octahedronGeometry args={[0.18]} />
-                    <meshStandardMaterial color={theme === AppTheme.CLASSIC ? "#555" : "#f59e0b"} emissive={theme === AppTheme.CLASSIC ? "#000" : "#f59e0b"} emissiveIntensity={theme === AppTheme.CLASSIC ? 0 : 2} />
-                </mesh>
-            </Float>
-
-            <OrbitControls 
-                enablePan={false} 
-                minPolarAngle={Math.PI/6} 
-                maxPolarAngle={Math.PI/2.15} 
-                minDistance={5} 
-                maxDistance={12} 
-                makeDefault
-            />
-        </Canvas>
-    </div>
+          </Canvas>
+      </div>
+    </SceneErrorBoundary>
   );
 };
 
